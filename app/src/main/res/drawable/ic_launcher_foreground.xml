@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Gradient and stroke rounded squircle centering at 54, 54 with size 66dp -->
+    <path
+        android:pathData="M 43,21 H 65 A 22,22 0 0 1 87,43 V 65 A 22,22 0 0 1 65,87 H 43 A 22,22 0 0 1 21,65 V 43 A 22,22 0 0 1 43,21 Z"
+        android:strokeWidth="1.5"
+        android:strokeColor="#00FF66">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="54"
+                android:startY="21"
+                android:endX="54"
+                android:endY="87"
+                android:type="linear">
+                <item
+                    android:color="#00E676"
+                    android:offset="0.0" />
+                <item
+                    android:color="#014D23"
+                    android:offset="1.0" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Scaled and centered White Dollar Sign ($) -->
+    <group
+        android:scaleX="1.5"
+        android:scaleY="1.5"
+        android:translateX="36"
+        android:translateY="36">
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M12,2c0.55,0 1,0.45 1,1v1.1c2.14,0.45 3.82,2 4.4,4.1l0.04,0.18c0.14,0.53 -0.18,1.07 -0.71,1.21s-1.07,-0.18 -1.21,-0.71A3,3,0,0,0,12,7c-1.66,0 -3,1.34 -3,3c0,1.52 1.13,2.78 2.6,2.97l0.4,0.03c2.25,0.25 4,1.96 4,4.19c0,2.15 -1.68,3.71 -3.81,4.11v1.1c0,0.55 -0.45,1 -1,1s-1,-0.45 -1,-1v-1.1c-2.45,-0.5 -4.24,-2.23 -4.75,-4.62c-0.12,-0.54 0.23,-1.06 0.77,-1.18s1.06,0.23 1.18,0.77C9.8,19 10.74,20 12,20c1.66,0 3,-1.34 3,-3c0,-1.48 -1.08,-2.72 -2.52,-2.95l-0.48,-0.05c-2.25,-0.25 -4,-1.96 -4,-4.19c0,-2.14 1.67,-3.7 3.81,-4.11v-1.1c0,-0.55 0.45,-1 1,-1z" />
+    </group>
+</vector>
