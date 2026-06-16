@@ -40,10 +40,10 @@ interface ApiService {
     suspend fun getDashboard(): Response<DashboardResponse>
 
     @GET("api/credit-cards")
-    suspend fun getCreditCards(): Response<List<CreditCard>>
+    suspend fun getCreditCards(): Response<List<Card>>
 
     @POST("api/credit-cards")
-    suspend fun createCreditCard(@Body request: CreditCard): Response<CreditCard>
+    suspend fun createCreditCard(@Body request: Card): Response<Card>
 
     @DELETE("api/credit-cards/{id}")
     suspend fun deleteCreditCard(@Path("id") id: Int): Response<Unit>

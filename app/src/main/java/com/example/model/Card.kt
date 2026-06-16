@@ -1,6 +1,6 @@
 package com.example.model
 
-data class CreditCard(
+data class Card(
     val id: Int? = null,
     val name: String,
     val cardholderName: String,
