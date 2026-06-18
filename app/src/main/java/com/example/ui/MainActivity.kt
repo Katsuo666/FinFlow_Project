@@ -2,16 +2,13 @@ package com.example.ui
 
 import android.content.Intent
 import android.os.Bundle
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -28,12 +25,11 @@ import com.example.model.Expense
 import com.example.model.Goal
 import com.example.model.Card
 import com.example.ui.theme.MyApplicationTheme
+import com.example.ui.dialogs.CreateGoalDialog
+import com.example.ui.dialogs.AddCardDialog
+import com.example.ui.dialogs.CardDetailsDialog
 import com.example.utils.TokenManager
 import kotlinx.coroutines.launch
-import java.text.NumberFormat
-import java.util.Locale
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.ui.text.input.KeyboardType
 
 class MainActivity : ComponentActivity() {
     private lateinit var tokenManager: TokenManager
@@ -63,10 +59,6 @@ class MainActivity : ComponentActivity() {
                     onOpenAddExpense = {
                         startActivity(Intent(this@MainActivity, AddExpenseActivity::class.java))
                     },
-                    onOpenExpensesList = {
-                        val intent = Intent(this@MainActivity, ExpenseListActivity::class.java)
-                        startActivity(intent)
-                    },
                     resumeEpoch = resumeEpoch.value
                 )
             }
@@ -85,7 +77,6 @@ fun MainScreenContainer(
     tokenManager: TokenManager,
     onLogout: () -> Unit,
     onOpenAddExpense: () -> Unit,
-    onOpenExpensesList: () -> Unit,
     resumeEpoch: Long = 0L
 ) {
     var selectedTab by remember { mutableStateOf("dashboard") }
@@ -103,32 +94,34 @@ fun MainScreenContainer(
     var creditCardsList by remember { mutableStateOf(emptyList<Card>()) }
     var isRefreshing by remember { mutableStateOf(false) }
 
+    // Estados dos Diálogos
     var showCreateGoalDialog by remember { mutableStateOf(false) }
     var showAddCardDialog by remember { mutableStateOf(false) }
     var selectedDetailCard by remember { mutableStateOf<Card?>(null) }
 
-    // Obter Dados da API
+    // Função para obter todos os dados da API
     val fetchAllData = suspend {
         isRefreshing = true
         try {
             val api = RetrofitClient.getApiService(context)
 
-            // Obtenção direta de listas de fontes individuais para garantir sincronização 100% em tempo real
+            // Obter receitas e despesas
             val incomesRes = api.getIncomes()
             val expensesRes = api.getExpenses()
 
-            val incs = incomesRes.body() ?: emptyList()
-            val exps = expensesRes.body() ?: emptyList()
+            val incomes = incomesRes.body() ?: emptyList()
+            val expenses = expensesRes.body() ?: emptyList()
 
-            allIncomesList = incs
-            allExpensesList = exps
+            allIncomesList = incomes
+            allExpensesList = expenses
 
-            totalIncomes = incs.sumOf { it.amount }
-            totalExpenses = exps.sumOf { it.amount }
+            totalIncomes = incomes.sumOf { it.amount }
+            totalExpenses = expenses.sumOf { it.amount }
             balance = totalIncomes - totalExpenses
 
-            // Combinar lista para atividades recentes (obter as últimas 6)
-            val combined = (incs.map { it.copy(isIncome = true) } + exps.map { it.copy(isIncome = false) })
+            // Combinar e ordenar transações recentes
+            val combined = (incomes.map { it.copy(isIncome = true) } + 
+                           expenses.map { it.copy(isIncome = false) })
                 .sortedByDescending { it.date }
             rawRecentTransactions = combined.take(6)
 
@@ -159,127 +152,14 @@ fun MainScreenContainer(
     }
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(36.dp)
-                                .background(Color(0xFF2C2C2C), shape = CircleShape)
-                                .clickable { selectedTab = "perfil" },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Person,
-                                contentDescription = "Utilizador",
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                        Text(
-                            text = "FinFlow",
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 20.sp
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF121212)
-                )
-            )
-        },
-        bottomBar = {
-            NavigationBar(
-                containerColor = Color(0xFF131313),
-                tonalElevation = 8.dp
-            ) {
-                NavigationBarItem(
-                    selected = selectedTab == "dashboard",
-                    onClick = { selectedTab = "dashboard" },
-                    icon = { Icon(Icons.Default.Dashboard, contentDescription = "Dashboard") },
-                    label = { Text("Dashboard") },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = Color(0xFF131313),
-                        selectedTextColor = MaterialTheme.colorScheme.primary,
-                        indicatorColor = MaterialTheme.colorScheme.primary,
-                        unselectedIconColor = Color.LightGray,
-                        unselectedTextColor = Color.Gray
-                    )
-                )
-                NavigationBarItem(
-                    selected = selectedTab == "despesas",
-                    onClick = { selectedTab = "despesas" },
-                    icon = { Icon(Icons.Default.CreditCard, contentDescription = "Despesas") },
-                    label = { Text("Despesas") },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = Color(0xFF131313),
-                        selectedTextColor = MaterialTheme.colorScheme.primary,
-                        indicatorColor = MaterialTheme.colorScheme.primary,
-                        unselectedIconColor = Color.LightGray,
-                        unselectedTextColor = Color.Gray
-                    )
-                )
-                NavigationBarItem(
-                    selected = selectedTab == "metas",
-                    onClick = { selectedTab = "metas" },
-                    icon = { Icon(Icons.Default.Flag, contentDescription = "Metas") },
-                    label = { Text("Metas") },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = Color(0xFF131313),
-                        selectedTextColor = MaterialTheme.colorScheme.primary,
-                        indicatorColor = MaterialTheme.colorScheme.primary,
-                        unselectedIconColor = Color.LightGray,
-                        unselectedTextColor = Color.Gray
-                    )
-                )
-                NavigationBarItem(
-                    selected = selectedTab == "relatorios",
-                    onClick = { selectedTab = "relatorios" },
-                    icon = { Icon(Icons.Default.BarChart, contentDescription = "Relatórios") },
-                    label = { Text("Relatórios") },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = Color(0xFF131313),
-                        selectedTextColor = MaterialTheme.colorScheme.primary,
-                        indicatorColor = MaterialTheme.colorScheme.primary,
-                        unselectedIconColor = Color.LightGray,
-                        unselectedTextColor = Color.Gray
-                    )
-                )
-            }
-        },
+        topBar = { MainTopBar(selectedTab) { selectedTab = "perfil" } },
+        bottomBar = { MainBottomBar(selectedTab) { selectedTab = it } },
         floatingActionButton = {
-            if (selectedTab == "metas") {
-                FloatingActionButton(
-                    onClick = { showCreateGoalDialog = true },
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary,
-                    shape = CircleShape
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = "Nova Meta",
-                        modifier = Modifier.size(28.dp)
-                    )
-                }
-            } else if (selectedTab == "despesas") {
-                FloatingActionButton(
-                    onClick = onOpenAddExpense,
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary,
-                    shape = CircleShape
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = "Nova Transação",
-                        modifier = Modifier.size(28.dp)
-                    )
-                }
-            }
+            MainFloatingActionButton(
+                selectedTab = selectedTab,
+                onCreateGoal = { showCreateGoalDialog = true },
+                onAddExpense = onOpenAddExpense
+            )
         }
     ) { innerPadding ->
         Box(
@@ -318,484 +198,118 @@ fun MainScreenContainer(
         }
     }
 
-    // ---------------- SOBREPOSIÇÕES DE DIÁLOGO DE TAREFAS ----------------
+    // Diálogos Reutilizáveis
+    CreateGoalDialog(
+        showDialog = showCreateGoalDialog,
+        onDismiss = { showCreateGoalDialog = false },
+        onGoalCreated = { coroutineScope.launch { fetchAllData() } },
+        context = context,
+        coroutineScope = coroutineScope
+    )
 
-    // 1. DIÁLOGO DE CRIAÇÃO DE META
-    if (showCreateGoalDialog) {
-        var goalName by remember { mutableStateOf("") }
-        var targetAmtStr by remember { mutableStateOf("") }
-        var currentAmtStr by remember { mutableStateOf("") }
-        var deadlineStr by remember { mutableStateOf("") }
-        var isSavingGoal by remember { mutableStateOf(false) }
+    AddCardDialog(
+        showDialog = showAddCardDialog,
+        onDismiss = { showAddCardDialog = false },
+        onCardAdded = { coroutineScope.launch { fetchAllData() } },
+        context = context,
+        coroutineScope = coroutineScope
+    )
 
-        AlertDialog(
-            onDismissRequest = { showCreateGoalDialog = false },
-            title = { Text("Criar Nova Meta", color = Color.White, fontWeight = FontWeight.Bold) },
-            containerColor = Color(0xFF1E1E1E),
-            text = {
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.fillMaxWidth()
+    CardDetailsDialog(
+        card = selectedDetailCard,
+        onDismiss = { selectedDetailCard = null },
+        onCardDeleted = { coroutineScope.launch { fetchAllData() } },
+        context = context,
+        coroutineScope = coroutineScope,
+        onRemoveCard = { card -> creditCardsList = creditCardsList.filter { it.id != card.id } }
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun MainTopBar(selectedTab: String, onProfileClick: () -> Unit) {
+    TopAppBar(
+        title = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .background(Color(0xFF2C2C2C), shape = CircleShape)
+                        .clickable { onProfileClick() },
+                    contentAlignment = Alignment.Center
                 ) {
-                    OutlinedTextField(
-                        value = goalName,
-                        onValueChange = { goalName = it },
-                        label = { Text("Nome da Meta") },
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = MaterialTheme.colorScheme.primary,
-                            focusedLabelColor = MaterialTheme.colorScheme.primary,
-                            unfocusedLabelColor = Color.Gray,
-                            unfocusedBorderColor = Color(0xFF2C2C2C),
-                            focusedTextColor = Color.White,
-                            unfocusedTextColor = Color.White
-                        ),
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    OutlinedTextField(
-                        value = targetAmtStr,
-                        onValueChange = { targetAmtStr = it },
-                        label = { Text("Valor Alvo (€)") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = MaterialTheme.colorScheme.primary,
-                            focusedLabelColor = MaterialTheme.colorScheme.primary,
-                            unfocusedLabelColor = Color.Gray,
-                            unfocusedBorderColor = Color(0xFF2C2C2C),
-                            focusedTextColor = Color.White,
-                            unfocusedTextColor = Color.White
-                        ),
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    OutlinedTextField(
-                        value = currentAmtStr,
-                        onValueChange = { currentAmtStr = it },
-                        label = { Text("Valor Guardado Atual (€)") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = MaterialTheme.colorScheme.primary,
-                            focusedLabelColor = MaterialTheme.colorScheme.primary,
-                            unfocusedLabelColor = Color.Gray,
-                            unfocusedBorderColor = Color(0xFF2C2C2C),
-                            focusedTextColor = Color.White,
-                            unfocusedTextColor = Color.White
-                        ),
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    OutlinedTextField(
-                        value = deadlineStr,
-                        onValueChange = { deadlineStr = it },
-                        label = { Text("Prazo (Ex: 2026-12-31)") },
-                        placeholder = { Text("yyyy-MM-dd", color = Color.Gray) },
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = MaterialTheme.colorScheme.primary,
-                            focusedLabelColor = MaterialTheme.colorScheme.primary,
-                            unfocusedLabelColor = Color.Gray,
-                            unfocusedBorderColor = Color(0xFF2C2C2C),
-                            focusedTextColor = Color.White,
-                            unfocusedTextColor = Color.White
-                        ),
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.fillMaxWidth()
+                    Icon(
+                        imageVector = Icons.Default.Person,
+                        contentDescription = "Utilizador",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp)
                     )
                 }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        val targetVal = targetAmtStr.toDoubleOrNull() ?: 0.0
-                        val currentVal = currentAmtStr.toDoubleOrNull() ?: 0.0
-                        if (goalName.isEmpty()) {
-                            Toast.makeText(context, "Por favor insira um nome.", Toast.LENGTH_SHORT).show()
-                            return@Button
-                        }
-                        if (targetVal <= 0.0) {
-                            Toast.makeText(context, "Por favor insira um valor alvo válido.", Toast.LENGTH_SHORT).show()
-                            return@Button
-                        }
-
-                        isSavingGoal = true
-                        coroutineScope.launch {
-                            try {
-                                val api = RetrofitClient.getApiService(context)
-                                val deadlineFormatted = if (deadlineStr.isEmpty()) "2026-12-31" else deadlineStr
-                                val payload = Goal(
-                                    id = null,
-                                    name = goalName,
-                                    targetAmount = targetVal,
-                                    currentAmount = currentVal,
-                                    deadline = deadlineFormatted
-                                )
-                                val res = api.createGoal(payload)
-                                if (res.isSuccessful) {
-                                    Toast.makeText(context, "Meta criada com sucesso!", Toast.LENGTH_SHORT).show()
-                                    showCreateGoalDialog = false
-                                    fetchAllData()
-                                } else {
-                                    Toast.makeText(context, "Por favor tente novamente.", Toast.LENGTH_SHORT).show()
-                                }
-                            } catch (e: Exception) {
-                                e.printStackTrace()
-                                Toast.makeText(context, "Sem ligação à internet. Tentando offline.", Toast.LENGTH_SHORT).show()
-                                showCreateGoalDialog = false
-                            } finally {
-                                isSavingGoal = false
-                            }
-                        }
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                    enabled = !isSavingGoal
-                ) {
-                    if (isSavingGoal) {
-                        CircularProgressIndicator(color = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(20.dp))
-                    } else {
-                        Text("Criar", color = Color.Black, fontWeight = FontWeight.Bold)
-                    }
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showCreateGoalDialog = false }) {
-                    Text("Cancelar", color = Color.Gray)
-                }
+                Text(
+                    text = "FinFlow",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 20.sp
+                )
             }
+        },
+        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF121212))
+    )
+}
+
+@Composable
+private fun MainBottomBar(selectedTab: String, onTabSelected: (String) -> Unit) {
+    NavigationBar(containerColor = Color(0xFF131313), tonalElevation = 8.dp) {
+        val items = listOf(
+            "dashboard" to Pair(Icons.Default.Dashboard, "Dashboard"),
+            "despesas" to Pair(Icons.Default.CreditCard, "Despesas"),
+            "metas" to Pair(Icons.Default.Flag, "Metas"),
+            "relatorios" to Pair(Icons.Default.BarChart, "Relatórios")
         )
-    }
 
-    // 2. DIÁLOGO DE VINCULAÇÃO DE NOVO CARTÃO DE CRÉDITO
-    if (showAddCardDialog) {
-        var cardName by remember { mutableStateOf("") }
-        var cardholderName by remember { mutableStateOf("") }
-        var digits by remember { mutableStateOf("") }
-        var expiry by remember { mutableStateOf("") }
-        var type by remember { mutableStateOf("CREDIT") } // CRÉDITO ou DÉBITO
-        var limitAmtStr by remember { mutableStateOf("") }
-        var currentBillStr by remember { mutableStateOf("") }
-        var brand by remember { mutableStateOf("VISA") } // VISA ou MASTERCARD
-        var isSavingCard by remember { mutableStateOf(false) }
-
-        AlertDialog(
-            onDismissRequest = { showAddCardDialog = false },
-            title = { Text("Vincular Novo Cartão", color = Color.White, fontWeight = FontWeight.Bold) },
-            containerColor = Color(0xFF1E1E1E),
-            text = {
-                LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                    modifier = Modifier.fillMaxWidth().heightIn(max = 400.dp)
-                ) {
-                    item {
-                        OutlinedTextField(
-                            value = cardName,
-                            onValueChange = { cardName = it },
-                            label = { Text("Nome do Cartão (Ex: Millennium)") },
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                focusedLabelColor = MaterialTheme.colorScheme.primary,
-                                unfocusedBorderColor = Color(0xFF2C2C2C),
-                                focusedTextColor = Color.White,
-                                unfocusedTextColor = Color.White
-                            ),
-                            shape = RoundedCornerShape(8.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-                    item {
-                        OutlinedTextField(
-                            value = cardholderName,
-                            onValueChange = { cardholderName = it },
-                            label = { Text("Nome do Titular (Ex: MARIA SILVA)") },
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                focusedLabelColor = MaterialTheme.colorScheme.primary,
-                                unfocusedBorderColor = Color(0xFF2C2C2C),
-                                focusedTextColor = Color.White,
-                                unfocusedTextColor = Color.White
-                            ),
-                            shape = RoundedCornerShape(8.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-                    item {
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            OutlinedTextField(
-                                value = digits,
-                                onValueChange = { if (it.length <= 4) digits = it },
-                                label = { Text("Últimos 4 Dígitos") },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                    focusedLabelColor = MaterialTheme.colorScheme.primary,
-                                    unfocusedBorderColor = Color(0xFF2C2C2C),
-                                    focusedTextColor = Color.White,
-                                    unfocusedTextColor = Color.White
-                                ),
-                                shape = RoundedCornerShape(8.dp),
-                                modifier = Modifier.weight(1f)
-                            )
-                            OutlinedTextField(
-                                value = expiry,
-                                onValueChange = { expiry = it },
-                                label = { Text("Validade (yyyy-MM-dd)") },
-                                placeholder = { Text("Ex: 2030-05-01") },
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                    focusedLabelColor = MaterialTheme.colorScheme.primary,
-                                    unfocusedBorderColor = Color(0xFF2C2C2C),
-                                    focusedTextColor = Color.White,
-                                    unfocusedTextColor = Color.White
-                                ),
-                                shape = RoundedCornerShape(8.dp),
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
-                    }
-                    item {
-                        Text("Tipo de Cartão", color = Color.Gray, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                            Button(
-                                onClick = { type = "CREDIT" },
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = if (type == "CREDIT") MaterialTheme.colorScheme.primary else Color(0xFF2C2C2C)
-                                ),
-                                shape = RoundedCornerShape(8.dp),
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Text("Crédito", color = if (type == "CREDIT") Color.Black else Color.White, fontSize = 12.sp)
-                            }
-                            Button(
-                                onClick = { type = "DEBIT" },
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = if (type == "DEBIT") MaterialTheme.colorScheme.primary else Color(0xFF2C2C2C)
-                                ),
-                                shape = RoundedCornerShape(8.dp),
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Text("Débito", color = if (type == "DEBIT") Color.Black else Color.White, fontSize = 12.sp)
-                            }
-                        }
-                    }
-                    item {
-                        Text("Bandeira", color = Color.Gray, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                            Button(
-                                onClick = { brand = "VISA" },
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = if (brand == "VISA") MaterialTheme.colorScheme.primary else Color(0xFF2C2C2C)
-                                ),
-                                shape = RoundedCornerShape(8.dp),
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Text("Visa", color = if (brand == "VISA") Color.Black else Color.White, fontSize = 12.sp)
-                            }
-                            Button(
-                                onClick = { brand = "MASTERCARD" },
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = if (brand == "MASTERCARD") MaterialTheme.colorScheme.primary else Color(0xFF2C2C2C)
-                                ),
-                                shape = RoundedCornerShape(8.dp),
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Text("Mastercard", color = if (brand == "MASTERCARD") Color.Black else Color.White, fontSize = 12.sp)
-                            }
-                        }
-                    }
-                    if (type == "CREDIT") {
-                        item {
-                            OutlinedTextField(
-                                value = limitAmtStr,
-                                onValueChange = { limitAmtStr = it },
-                                label = { Text("Limite Total (€)") },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                    focusedLabelColor = MaterialTheme.colorScheme.primary,
-                                    unfocusedBorderColor = Color(0xFF2C2C2C),
-                                    focusedTextColor = Color.White,
-                                    unfocusedTextColor = Color.White
-                                ),
-                                shape = RoundedCornerShape(8.dp),
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                        }
-                        item {
-                            OutlinedTextField(
-                                value = currentBillStr,
-                                onValueChange = { currentBillStr = it },
-                                label = { Text("Fatura Atual (€)") },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                    focusedLabelColor = MaterialTheme.colorScheme.primary,
-                                    unfocusedBorderColor = Color(0xFF2C2C2C),
-                                    focusedTextColor = Color.White,
-                                    unfocusedTextColor = Color.White
-                                ),
-                                shape = RoundedCornerShape(8.dp),
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        val limitVal = limitAmtStr.toDoubleOrNull() ?: 2000.0
-                        val billVal = currentBillStr.toDoubleOrNull() ?: 0.0
-                        if (cardName.isEmpty() || cardholderName.isEmpty()) {
-                            Toast.makeText(context, "Por favor insira os dados do cartão.", Toast.LENGTH_SHORT).show()
-                            return@Button
-                        }
-                        if (digits.length < 4) {
-                            Toast.makeText(context, "Por favor insira os 4 últimos dígitos.", Toast.LENGTH_SHORT).show()
-                            return@Button
-                        }
-
-                        isSavingCard = true
-                        coroutineScope.launch {
-                            try {
-                                val api = RetrofitClient.getApiService(context)
-                                val finalExpiry = if (expiry.isEmpty()) "2031-01-01" else expiry
-                                val payload = Card(
-                                    id = null,
-                                    name = cardName,
-                                    cardholderName = cardholderName.uppercase(),
-                                    lastFourDigits = digits,
-                                    expirationDate = finalExpiry,
-                                    type = type,
-                                    limitAmount = limitVal,
-                                    currentBill = if (type == "CREDIT") billVal else 0.0,
-                                    brand = brand
-                                )
-                                val res = api.createCreditCard(payload)
-                                if (res.isSuccessful) {
-                                    Toast.makeText(context, "Cartão vinculado com sucesso!", Toast.LENGTH_SHORT).show()
-                                    showAddCardDialog = false
-                                    fetchAllData()
-                                } else {
-                                    Toast.makeText(context, "Erro do servidor.", Toast.LENGTH_SHORT).show()
-                                }
-                            } catch (e: Exception) {
-                                e.printStackTrace()
-                                Toast.makeText(context, "Erro de ligação. Cartão simulado offline.", Toast.LENGTH_SHORT).show()
-                                showAddCardDialog = false
-                            } finally {
-                                isSavingCard = false
-                            }
-                        }
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                    enabled = !isSavingCard
-                ) {
-                    if (isSavingCard) {
-                        CircularProgressIndicator(color = Color.Black, modifier = Modifier.size(20.dp))
-                    } else {
-                        Text("Vincular", color = Color.Black, fontWeight = FontWeight.Bold)
-                    }
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showAddCardDialog = false }) {
-                    Text("Cancelar", color = Color.Gray)
-                }
-            }
-        )
-    }
-
-    // 3. DIÁLOGO DE DETALHES E DESVINCULAÇÃO DE CARTÃO DE CRÉDITO
-    selectedDetailCard?.let { card ->
-        var isDeletingCard by remember { mutableStateOf(false) }
-        val currencyFormat = NumberFormat.getCurrencyInstance(Locale("pt", "PT")).apply {
-            currency = java.util.Currency.getInstance("EUR")
+        items.forEach { (tabId, iconLabel) ->
+            NavigationBarItem(
+                selected = selectedTab == tabId,
+                onClick = { onTabSelected(tabId) },
+                icon = { Icon(iconLabel.first, contentDescription = iconLabel.second) },
+                label = { Text(iconLabel.second) },
+                colors = NavigationBarItemDefaults.colors(
+                    selectedIconColor = Color(0xFF131313),
+                    selectedTextColor = MaterialTheme.colorScheme.primary,
+                    indicatorColor = MaterialTheme.colorScheme.primary,
+                    unselectedIconColor = Color.LightGray,
+                    unselectedTextColor = Color.Gray
+                )
+            )
         }
+    }
+}
 
-        AlertDialog(
-            onDismissRequest = { selectedDetailCard = null },
-            title = {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Icon(Icons.Default.CreditCard, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                    Text(card.name, color = Color.White, fontWeight = FontWeight.Bold)
-                }
-            },
-            containerColor = Color(0xFF1E1E1E),
-            text = {
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Titular: ${card.cardholderName}", color = Color.White, fontSize = 14.sp)
-                    Text("Número: •••• •••• •••• ${card.lastFourDigits}", color = Color.LightGray, fontSize = 14.sp)
-                    Text("Validade: ${card.expirationDate}", color = Color.LightGray, fontSize = 14.sp)
-                    Text("Bandeira: ${card.brand}", color = Color.LightGray, fontSize = 14.sp)
-                    Text("Tipo: ${card.type}", color = Color.LightGray, fontSize = 14.sp)
-
-                    Divider(color = Color(0xFF2C2C2C), thickness = 1.dp, modifier = Modifier.padding(vertical = 4.dp))
-
-                    if (card.type.uppercase() == "CREDIT") {
-                        val limit = card.limitAmount ?: 0.0
-                        val bill = card.currentBill ?: 0.0
-                        Text("Fatura Atual: ${currencyFormat.format(bill)}", color = Color.White, fontWeight = FontWeight.Bold)
-                        Text("Limite Total: ${currencyFormat.format(limit)}", color = Color.LightGray)
-                        Text("Disponível: ${currencyFormat.format(limit - bill)}", color = Color(0xFF00E676), fontWeight = FontWeight.Bold)
-                    } else {
-                        val balanceVal = card.limitAmount ?: 0.0
-                        Text("Saldo da Conta: ${currencyFormat.format(balanceVal)}", color = Color.White, fontWeight = FontWeight.Bold)
-                    }
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        val cardId = card.id
-                        if (cardId != null) {
-                            isDeletingCard = true
-                            coroutineScope.launch {
-                                try {
-                                    val api = RetrofitClient.getApiService(context)
-                                    val response = api.deleteCreditCard(cardId)
-                                    if (response.isSuccessful) {
-                                        Toast.makeText(context, "Cartão desvinculado com sucesso!", Toast.LENGTH_SHORT).show()
-                                        selectedDetailCard = null
-                                        fetchAllData()
-                                    } else {
-                                        Toast.makeText(context, "Erro ao desvincular.", Toast.LENGTH_SHORT).show()
-                                    }
-                                } catch (e: Exception) {
-                                    e.printStackTrace()
-                                    // Remover da listagem offline diretamente
-                                    creditCardsList = creditCardsList.filter { it.id != cardId }
-                                    selectedDetailCard = null
-                                    Toast.makeText(context, "Desvinculado localmente.", Toast.LENGTH_SHORT).show()
-                                } finally {
-                                    isDeletingCard = false
-                                }
-                            }
-                        } else {
-                            // Desseleção de cartão offline/simulado
-                            creditCardsList = creditCardsList.filter { it.lastFourDigits != card.lastFourDigits }
-                            selectedDetailCard = null
-                            Toast.makeText(context, "Desvinculado com sucesso!", Toast.LENGTH_SHORT).show()
-                        }
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF690005)),
-                    enabled = !isDeletingCard
-                ) {
-                    if (isDeletingCard) {
-                        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp))
-                    } else {
-                        Text("Desvincular Cartão", color = Color.White, fontWeight = FontWeight.Bold)
-                    }
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { selectedDetailCard = null }) {
-                    Text("Voltar", color = Color.Gray)
-                }
-            }
-        )
+@Composable
+private fun MainFloatingActionButton(
+    selectedTab: String,
+    onCreateGoal: () -> Unit,
+    onAddExpense: () -> Unit
+) {
+    when (selectedTab) {
+        "metas" -> FloatingActionButton(
+            onClick = onCreateGoal,
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary,
+            shape = CircleShape
+        ) {
+            Icon(Icons.Default.Add, contentDescription = "Nova Meta", modifier = Modifier.size(28.dp))
+        }
+        "despesas" -> FloatingActionButton(
+            onClick = onAddExpense,
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary,
+            shape = CircleShape
+        ) {
+            Icon(Icons.Default.Add, contentDescription = "Nova Transação", modifier = Modifier.size(28.dp))
+        }
     }
 }

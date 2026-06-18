@@ -1,0 +1,645 @@
+openapi: 3.0.3
+info:
+  title: FinFlow API
+  version: 1.0.0
+  description: API da aplicação FinFlow com autenticação JWT, gestão de finanças, metas, categorias e cartões.
+servers:
+  - url: https://finflow-backend-production-5d94.up.railway.app
+    description: Produção Railway
+  - url: http://localhost:8080
+    description: Local
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: ok
+        database:
+          type: string
+          example: connected
+        uptime:
+          type: string
+          example: "72h"
+    AuthRegisterRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+      required:
+        - email
+        - password
+        - firstName
+        - lastName
+    AuthLoginRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+      required:
+        - email
+        - password
+    AuthLoginResponse:
+      type: object
+      properties:
+        token:
+          type: string
+        email:
+          type: string
+    DashboardResponse:
+      type: object
+      properties:
+        balance:
+          type: number
+          format: double
+        totalIncome:
+          type: number
+          format: double
+        totalExpense:
+          type: number
+          format: double
+        incomesCount:
+          type: integer
+        expensesCount:
+          type: integer
+    IncomeExpenseBase:
+      type: object
+      properties:
+        description:
+          type: string
+        amount:
+          type: number
+          format: double
+        date:
+          type: string
+          format: date
+          example: 2026-06-18
+        categoryId:
+          type: integer
+      required:
+        - description
+        - amount
+        - date
+        - categoryId
+    GoalRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        targetAmount:
+          type: number
+          format: double
+        currentAmount:
+          type: number
+          format: double
+        deadline:
+          type: string
+          format: date
+          example: 2026-12-31
+      required:
+        - name
+        - targetAmount
+        - currentAmount
+        - deadline
+    CategoryRequest:
+      type: object
+      properties:
+        name:
+          type: string
+      required:
+        - name
+    ProfileUpdateRequest:
+      type: object
+      properties:
+        firstName:
+          type: string
+        lastName:
+          type: string
+        bio:
+          type: string
+    AvatarUpdateRequest:
+      type: object
+      properties:
+        avatarUrl:
+          type: string
+          format: uri
+      required:
+        - avatarUrl
+    PasswordChangeRequest:
+      type: object
+      properties:
+        oldPassword:
+          type: string
+        newPassword:
+          type: string
+      required:
+        - oldPassword
+        - newPassword
+    CreditCardRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        cardholderName:
+          type: string
+        lastFourDigits:
+          type: string
+          minLength: 4
+          maxLength: 4
+        expirationDate:
+          type: string
+          format: date
+          example: 2031-05-01
+        type:
+          type: string
+          example: CREDIT
+        limitAmount:
+          type: number
+          format: double
+          nullable: true
+        currentBill:
+          type: number
+          format: double
+          nullable: true
+        brand:
+          type: string
+      required:
+        - name
+        - cardholderName
+        - lastFourDigits
+        - expirationDate
+        - type
+        - brand
+  parameters:
+    IdPath:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+paths:
+  /api/auth/register:
+    post:
+      summary: Registar novo utilizador
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthRegisterRequest'
+      responses:
+        '201':
+          description: Utilizador criado
+        '400':
+          description: Erro de validação
+  /api/auth/login:
+    post:
+      summary: Login (devolve token JWT + email)
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthLoginRequest'
+      responses:
+        '200':
+          description: Sessão iniciada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthLoginResponse'
+        '401':
+          description: Credenciais inválidas
+  /api/health:
+    get:
+      summary: Health check (estado da app, BD, uptime)
+      tags: [System]
+      responses:
+        '200':
+          description: Status OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+  /api/dashboard:
+    get:
+      summary: Indicadores financeiros do utilizador
+      security:
+        - bearerAuth: []
+      tags: [Dashboard]
+      responses:
+        '200':
+          description: Dashboard carregado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardResponse'
+  /api/incomes:
+    get:
+      summary: Listar todas as receitas
+      security:
+        - bearerAuth: []
+      tags: [Incomes]
+      responses:
+        '200':
+          description: Lista de receitas
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/IncomeExpenseBase'
+    post:
+      summary: Criar uma receita
+      security:
+        - bearerAuth: []
+      tags: [Incomes]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IncomeExpenseBase'
+      responses:
+        '201':
+          description: Receita criada
+  /api/incomes/{id}:
+    get:
+      summary: Ver uma receita específica
+      security:
+        - bearerAuth: []
+      tags: [Incomes]
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: Receita encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IncomeExpenseBase'
+    put:
+      summary: Atualizar uma receita
+      security:
+        - bearerAuth: []
+      tags: [Incomes]
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IncomeExpenseBase'
+      responses:
+        '200':
+          description: Receita atualizada
+    delete:
+      summary: Eliminar uma receita
+      security:
+        - bearerAuth: []
+      tags: [Incomes]
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '204':
+          description: Receita eliminada
+  /api/expenses:
+    get:
+      summary: Listar todas as despesas
+      security:
+        - bearerAuth: []
+      tags: [Expenses]
+      responses:
+        '200':
+          description: Lista de despesas
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/IncomeExpenseBase'
+    post:
+      summary: Criar uma despesa
+      security:
+        - bearerAuth: []
+      tags: [Expenses]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IncomeExpenseBase'
+      responses:
+        '201':
+          description: Despesa criada
+  /api/expenses/{id}:
+    get:
+      summary: Ver uma despesa específica
+      security:
+        - bearerAuth: []
+      tags: [Expenses]
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: Despesa encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IncomeExpenseBase'
+    put:
+      summary: Atualizar uma despesa
+      security:
+        - bearerAuth: []
+      tags: [Expenses]
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IncomeExpenseBase'
+      responses:
+        '200':
+          description: Despesa atualizada
+    delete:
+      summary: Eliminar uma despesa
+      security:
+        - bearerAuth: []
+      tags: [Expenses]
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '204':
+          description: Despesa eliminada
+  /api/goals:
+    get:
+      summary: Listar metas do utilizador
+      security:
+        - bearerAuth: []
+      tags: [Goals]
+      responses:
+        '200':
+          description: Lista de metas
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/GoalRequest'
+    post:
+      summary: Criar uma meta
+      security:
+        - bearerAuth: []
+      tags: [Goals]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GoalRequest'
+      responses:
+        '201':
+          description: Meta criada
+  /api/goals/{id}:
+    get:
+      summary: Ver uma meta específica
+      security:
+        - bearerAuth: []
+      tags: [Goals]
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: Meta encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GoalRequest'
+    put:
+      summary: Atualizar uma meta
+      security:
+        - bearerAuth: []
+      tags: [Goals]
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GoalRequest'
+      responses:
+        '200':
+          description: Meta atualizada
+    delete:
+      summary: Eliminar uma meta
+      security:
+        - bearerAuth: []
+      tags: [Goals]
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '204':
+          description: Meta eliminada
+  /api/categories:
+    get:
+      summary: Listar categorias do utilizador
+      security:
+        - bearerAuth: []
+      tags: [Categories]
+      responses:
+        '200':
+          description: Lista de categorias
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    name:
+                      type: string
+    post:
+      summary: Criar uma categoria
+      security:
+        - bearerAuth: []
+      tags: [Categories]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CategoryRequest'
+      responses:
+        '201':
+          description: Categoria criada
+  /api/categories/{id}:
+    delete:
+      summary: Eliminar uma categoria
+      security:
+        - bearerAuth: []
+      tags: [Categories]
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '204':
+          description: Categoria eliminada
+  /api/users/profile:
+    get:
+      summary: Obter dados do perfil
+      security:
+        - bearerAuth: []
+      tags: [Users]
+      responses:
+        '200':
+          description: Perfil do utilizador
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  firstName:
+                    type: string
+                  lastName:
+                    type: string
+                  bio:
+                    type: string
+                  email:
+                    type: string
+    put:
+      summary: Atualizar nome, apelido, biografia
+      security:
+        - bearerAuth: []
+      tags: [Users]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProfileUpdateRequest'
+      responses:
+        '200':
+          description: Perfil atualizado
+  /api/users/avatar:
+    put:
+      summary: Atualizar foto de perfil
+      security:
+        - bearerAuth: []
+      tags: [Users]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AvatarUpdateRequest'
+      responses:
+        '200':
+          description: Avatar atualizado
+  /api/users/password:
+    put:
+      summary: Alterar password (valida antiga)
+      security:
+        - bearerAuth: []
+      tags: [Users]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordChangeRequest'
+      responses:
+        '200':
+          description: Password alterada
+  /api/credit-cards:
+    get:
+      summary: Listar cartões do utilizador
+      security:
+        - bearerAuth: []
+      tags: [CreditCards]
+      responses:
+        '200':
+          description: Lista de cartões
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CreditCardRequest'
+    post:
+      summary: Criar um cartão
+      security:
+        - bearerAuth: []
+      tags: [CreditCards]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreditCardRequest'
+      responses:
+        '201':
+          description: Cartão criado
+  /api/credit-cards/{id}:
+    get:
+      summary: Ver detalhe de um cartão
+      security:
+        - bearerAuth: []
+      tags: [CreditCards]
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: Detalhe do cartão
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreditCardRequest'
+    put:
+      summary: Atualizar um cartão
+      security:
+        - bearerAuth: []
+      tags: [CreditCards]
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreditCardRequest'
+      responses:
+        '200':
+          description: Cartão atualizado
+    delete:
+      summary: Eliminar um cartão
+      security:
+        - bearerAuth: []
+      tags: [CreditCards]
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '204':
+          description: Cartão eliminado
