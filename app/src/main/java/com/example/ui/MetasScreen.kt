@@ -210,11 +210,3 @@ fun MetasScreen(goals: List<Goal>, onRefresh: () -> Unit) {
         }
     }
 }
-
-fun getStaticSampleGoals(): List<Goal> {
-    return listOf(
-        Goal(1, "Viagem Japão", 15000.0, 8500.0, "Dez 2024"),
-        Goal(2, "Reserva de Emergência", 10000.0, 5000.0, "Nov 2024"),
-        Goal(3, "Novo Setup", 5000.0, 1000.0, "Ago 2024")
-    )
-}

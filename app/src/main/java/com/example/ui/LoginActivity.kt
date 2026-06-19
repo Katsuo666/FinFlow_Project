@@ -6,8 +6,6 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -38,7 +36,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.api.RetrofitClient
 import com.example.model.LoginRequest
-import com.example.model.RegisterRequest
 import com.example.ui.theme.MyApplicationTheme
 import com.example.utils.TokenManager
 import kotlinx.coroutines.launch
@@ -135,27 +132,15 @@ fun LoginScreenContent(onAuthSuccess: (String, String?, String?) -> Unit) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
 
-    var isLoginMode by remember { mutableStateOf(true) }
-    var name by remember { mutableStateOf("") }
-    var lastName by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
-    var confirmPassword by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
-    var confirmPasswordVisible by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
-
-    // Alteração suave da cor de fundo baseada no modo do ecrã
-    val backgroundColor by animateColorAsState(
-        targetValue = if (isLoginMode) Color(0xFF121212) else Color(0xFF022B17),
-        animationSpec = tween(durationMillis = 350),
-        label = "BgColorAnimation"
-    )
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(backgroundColor)
+            .background(Color(0xFF121212))
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 24.dp, vertical = 32.dp),
         contentAlignment = Alignment.Center
@@ -189,7 +174,6 @@ fun LoginScreenContent(onAuthSuccess: (String, String?, String?) -> Unit) {
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Nome da Marca da Aplicação - buildAnnotatedString divide a cor exatamente como nas imagensagens
             Text(
                 text = buildAnnotatedString {
                     append("Fin")
@@ -204,9 +188,8 @@ fun LoginScreenContent(onAuthSuccess: (String, String?, String?) -> Unit) {
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Título do Ecrã
             Text(
-                text = if (isLoginMode) "Login" else "Criar Conta",
+                text = "Login",
                 color = Color.White,
                 fontSize = 28.sp,
                 fontWeight = FontWeight.Bold
@@ -214,162 +197,61 @@ fun LoginScreenContent(onAuthSuccess: (String, String?, String?) -> Unit) {
 
             Spacer(modifier = Modifier.height(28.dp))
 
-            // --- Contentor de campos ---
-            if (isLoginMode) {
-                // Campos de Login
-                FinFlowInputField(
-                    value = email,
-                    onValueChange = { email = it },
-                    labelText = "Digite seu e-mail *",
-                    placeholderText = "exemplo@email.com",
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email)
-                )
+            // Campos de Login
+            FinFlowInputField(
+                value = email,
+                onValueChange = { email = it },
+                labelText = "Digite seu e-mail *",
+                placeholderText = "exemplo@email.com",
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email)
+            )
 
-                Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-                FinFlowInputField(
-                    value = password,
-                    onValueChange = { password = it },
-                    labelText = "Digite sua senha *",
-                    visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                    trailingIcon = {
-                        IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                            Icon(
-                                imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                                contentDescription = "Mostrar senha",
-                                tint = Color.Gray
-                            )
-                        }
+            FinFlowInputField(
+                value = password,
+                onValueChange = { password = it },
+                labelText = "Digite sua senha *",
+                visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                trailingIcon = {
+                    IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                        Icon(
+                            imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                            contentDescription = "Mostrar senha",
+                            tint = Color.Gray
+                        )
                     }
-                )
-            } else {
-                // Campos de Registo
-                FinFlowInputField(
-                    value = email,
-                    onValueChange = { email = it },
-                    labelText = "Seu Email *",
-                    placeholderText = "exemplo@email.com",
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email)
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                FinFlowInputField(
-                    value = name,
-                    onValueChange = { name = it },
-                    labelText = "Nome *"
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                FinFlowInputField(
-                    value = lastName,
-                    onValueChange = { lastName = it },
-                    labelText = "Sobrenome *"
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                FinFlowInputField(
-                    value = password,
-                    onValueChange = { password = it },
-                    labelText = "Digite sua senha *",
-                    visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                    trailingIcon = {
-                        IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                            Icon(
-                                imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                                contentDescription = "Mostrar senha",
-                                tint = Color.Gray
-                            )
-                        }
-                    }
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                FinFlowInputField(
-                    value = confirmPassword,
-                    onValueChange = { confirmPassword = it },
-                    labelText = "Confirme sua senha *",
-                    visualTransformation = if (confirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                    trailingIcon = {
-                        IconButton(onClick = { confirmPasswordVisible = !confirmPasswordVisible }) {
-                            Icon(
-                                imageVector = if (confirmPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                                contentDescription = "Confirmar senha",
-                                tint = Color.Gray
-                            )
-                        }
-                    }
-                )
-            }
+                }
+            )
 
             Spacer(modifier = Modifier.height(32.dp))
-
-            // Botão de Ação
-            // Botão de login -> fundo verde brilhante com texto preto/verde escuro profundo
-            // Botão de registo -> fundo branco sólido com texto verde escuro
-            val buttonColor = if (isLoginMode) Color(0xFF00FF66) else Color.White
-            val buttonContentColor = if (isLoginMode) Color(0xFF121212) else Color(0xFF022B17)
 
             Button(
                 onClick = {
                     if (isLoading) return@Button
 
-                    // Validações básicas
                     if (email.isEmpty() || password.isEmpty()) {
                         Toast.makeText(context, "Por favor preencha todos os campos", Toast.LENGTH_SHORT).show()
                         return@Button
-                    }
-                    if (!isLoginMode) {
-                        if (name.isEmpty() || lastName.isEmpty()) {
-                            Toast.makeText(context, "Por favor preencha o Nome e Sobrenome", Toast.LENGTH_SHORT).show()
-                            return@Button
-                        }
-                        if (password != confirmPassword) {
-                            Toast.makeText(context, "As senhas não coincidem", Toast.LENGTH_SHORT).show()
-                            return@Button
-                        }
                     }
 
                     isLoading = true
                     coroutineScope.launch {
                         try {
                             val apiService = RetrofitClient.getApiService(context)
-                            if (isLoginMode) {
-                                val response = apiService.login(LoginRequest(email, password))
-                                if (response.isSuccessful && response.body() != null) {
-                                    val authBody = response.body()!!
-                                    val token = authBody.token
-                                    if (!token.isNullOrEmpty()) {
-                                        onAuthSuccess(token, authBody.name, authBody.email)
-                                    } else {
-                                        Toast.makeText(context, "Erro: Sem token na resposta", Toast.LENGTH_LONG).show()
-                                    }
+                            val response = apiService.login(LoginRequest(email, password))
+                            if (response.isSuccessful && response.body() != null) {
+                                val authBody = response.body()!!
+                                val token = authBody.token
+                                if (!token.isNullOrEmpty()) {
+                                    onAuthSuccess(token, authBody.name, authBody.email)
                                 } else {
-                                    val errorMsg = response.errorBody()?.string() ?: "Credenciais inválidas"
-                                    Toast.makeText(context, "Erro no login: $errorMsg", Toast.LENGTH_LONG).show()
+                                    Toast.makeText(context, "Erro: Sem token na resposta", Toast.LENGTH_LONG).show()
                                 }
                             } else {
-                                val fullName = "$name $lastName"
-                                val response = apiService.register(RegisterRequest(fullName, email, password))
-                                if (response.isSuccessful && response.body() != null) {
-                                    val authBody = response.body()!!
-                                    val token = authBody.token
-                                    if (!token.isNullOrEmpty()) {
-                                        onAuthSuccess(token, authBody.name, authBody.email)
-                                    } else {
-                                        Toast.makeText(context, "Registo efetuado! Faça login.", Toast.LENGTH_SHORT).show()
-                                        isLoginMode = true
-                                    }
-                                } else {
-                                    val errorMsg = response.errorBody()?.string() ?: "Dados de registo inválidos"
-                                    Toast.makeText(context, "Erro no registo: $errorMsg", Toast.LENGTH_LONG).show()
-                                }
+                                val errorMsg = response.errorBody()?.string() ?: "Credenciais inválidas"
+                                Toast.makeText(context, "Erro no login: $errorMsg", Toast.LENGTH_LONG).show()
                             }
                         } catch (e: Exception) {
                             e.printStackTrace()
@@ -383,17 +265,17 @@ fun LoginScreenContent(onAuthSuccess: (String, String?, String?) -> Unit) {
                     .fillMaxWidth()
                     .height(56.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = buttonColor,
-                    contentColor = buttonContentColor
+                    containerColor = Color(0xFF00FF66),
+                    contentColor = Color(0xFF121212)
                 ),
                 shape = RoundedCornerShape(28.dp),
                 enabled = !isLoading
             ) {
                 if (isLoading) {
-                    CircularProgressIndicator(color = buttonContentColor, modifier = Modifier.size(24.dp))
+                    CircularProgressIndicator(color = Color(0xFF121212), modifier = Modifier.size(24.dp))
                 } else {
                     Text(
-                        text = if (isLoginMode) "Entrar" else "Registrar",
+                        text = "Entrar",
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -402,38 +284,37 @@ fun LoginScreenContent(onAuthSuccess: (String, String?, String?) -> Unit) {
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Link do sub-botão: "Esqueci a Palavra-passe?" apenas visível no ecrã de Login
-            if (isLoginMode) {
-                Text(
-                    text = "Esqueci o Password?",
-                    color = Color.White,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Normal,
-                    modifier = Modifier
-                        .clickable {
-                            Toast.makeText(context, "Mecanismo de recuperação em desenvolvimento.", Toast.LENGTH_SHORT).show()
-                        }
-                        .padding(vertical = 4.dp)
-                )
-            }
+            Text(
+                text = "Esqueci o Password?",
+                color = Color.White,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Normal,
+                modifier = Modifier
+                    .clickable {
+                        Toast.makeText(context, "Mecanismo de recuperação em desenvolvimento.", Toast.LENGTH_SHORT).show()
+                    }
+                    .padding(vertical = 4.dp)
+            )
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Gatilho de mudança de modo na parte inferior
             Row(
                 modifier = Modifier
-                    .clickable { isLoginMode = !isLoginMode }
+                    .clickable {
+                        val intent = Intent(context, RegisterActivity::class.java)
+                        context.startActivity(intent)
+                    }
                     .padding(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = if (isLoginMode) "Não tem conta? " else "Já tem conta? ",
-                    color = if (isLoginMode) Color.Gray else Color.White.copy(alpha = 0.7f),
+                    text = "Não tem conta? ",
+                    color = Color.Gray,
                     fontSize = 14.sp
                 )
                 Text(
-                    text = if (isLoginMode) "Crie uma agora" else "Fazer Login",
-                    color = if (isLoginMode) Color(0xFF00FF66) else Color.White,
+                    text = "Crie uma agora",
+                    color = Color(0xFF00FF66),
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold
                 )

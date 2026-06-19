@@ -490,11 +490,3 @@ fun TransactionRowItem(item: Expense, currencyFormat: NumberFormat) {
         }
     }
 }
-
-fun getStaticSampleTransactions(): List<Expense> {
-    return listOf(
-        Expense(1, "Supermercado", 450.0, "Hoje, 14:30", 1, "Alimentação", false),
-        Expense(2, "Salário", 8500.0, "Ontem, 09:00", 2, "Renda", true),
-        Expense(3, "Conta de Luz", 185.50, "12 Fev, 10:15", 3, "Contas", false)
-    )
-}

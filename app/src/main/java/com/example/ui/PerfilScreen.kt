@@ -25,6 +25,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.api.RetrofitClient
+import com.example.model.CategoryRequest
+import com.example.model.PasswordUpdateRequest
+import com.example.model.ProfileUpdateRequest
 import com.example.utils.TokenManager
 import kotlinx.coroutines.launch
 
@@ -39,6 +42,9 @@ fun PerfilScreen(
     var profilePicUri by remember { mutableStateOf(tokenManager.getProfilePicture()) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var isDeleting by remember { mutableStateOf(false) }
+    var showEditProfileDialog by remember { mutableStateOf(false) }
+    var showChangePasswordDialog by remember { mutableStateOf(false) }
+    var showCreateCategoryDialog by remember { mutableStateOf(false) }
 
     val launcher = rememberLauncherForActivityResult(
         contract = androidx.activity.result.contract.ActivityResultContracts.GetContent()
@@ -223,7 +229,141 @@ fun PerfilScreen(
                 ProfileDetailRow(label = "Idioma", value = "Português (Portugal)")
                 HorizontalDivider(color = Color(0xFF2C2C2C))
                 ProfileDetailRow(label = "Tipo de Conta", value = "Utilizador Standard")
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(onClick = { showEditProfileDialog = true }, modifier = Modifier.weight(1f)) {
+                        Text("Editar Perfil")
+                    }
+                    Button(onClick = { showChangePasswordDialog = true }, modifier = Modifier.weight(1f)) {
+                        Text("Alterar Password")
+                    }
+                }
             }
+        }
+
+        // Diálogo de Editar Perfil
+        if (showEditProfileDialog) {
+            var firstName by remember { mutableStateOf(tokenManager.getUserName().split(" ").firstOrNull() ?: "") }
+            var lastNameDialog by remember { mutableStateOf(tokenManager.getUserName().split(" ").drop(1).joinToString(" ")) }
+            var bio by remember { mutableStateOf("") }
+            AlertDialog(
+                onDismissRequest = { showEditProfileDialog = false },
+                title = { Text("Editar Perfil", color = Color.White) },
+                text = {
+                    Column {
+                        OutlinedTextField(value = firstName, onValueChange = { firstName = it }, label = { Text("Nome") })
+                        Spacer(modifier = Modifier.height(8.dp))
+                        OutlinedTextField(value = lastNameDialog, onValueChange = { lastNameDialog = it }, label = { Text("Sobrenome") })
+                        Spacer(modifier = Modifier.height(8.dp))
+                        OutlinedTextField(value = bio, onValueChange = { bio = it }, label = { Text("Bio") })
+                    }
+                },
+                confirmButton = {
+                    Button(onClick = {
+                        coroutineScope.launch {
+                            try {
+                                val api = RetrofitClient.getApiService(context)
+                                val response = api.updateUserProfile(ProfileUpdateRequest(firstName, lastNameDialog, bio))
+                                if (response.isSuccessful && response.body() != null) {
+                                    val body = response.body()!!
+                                    tokenManager.saveUser(body.name ?: "", body.email ?: "")
+                                    Toast.makeText(context, "Perfil atualizado", Toast.LENGTH_SHORT).show()
+                                } else {
+                                    Toast.makeText(context, "Erro ao atualizar perfil", Toast.LENGTH_LONG).show()
+                                }
+                            } catch (e: Exception) {
+                                e.printStackTrace()
+                                Toast.makeText(context, "Erro de rede: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+                            } finally {
+                                showEditProfileDialog = false
+                            }
+                        }
+                    }) { Text("Salvar") }
+                },
+                dismissButton = { TextButton(onClick = { showEditProfileDialog = false }) { Text("Cancelar") } },
+                containerColor = Color(0xFF1E1E1E)
+            )
+        }
+
+        // Diálogo de Alterar Password
+        if (showChangePasswordDialog) {
+            var oldPass by remember { mutableStateOf("") }
+            var newPass by remember { mutableStateOf("") }
+            var confirmNew by remember { mutableStateOf("") }
+            AlertDialog(
+                onDismissRequest = { showChangePasswordDialog = false },
+                title = { Text("Alterar Password", color = Color.White) },
+                text = {
+                    Column {
+                        OutlinedTextField(value = oldPass, onValueChange = { oldPass = it }, label = { Text("Password Atual") })
+                        Spacer(modifier = Modifier.height(8.dp))
+                        OutlinedTextField(value = newPass, onValueChange = { newPass = it }, label = { Text("Nova Password") })
+                        Spacer(modifier = Modifier.height(8.dp))
+                        OutlinedTextField(value = confirmNew, onValueChange = { confirmNew = it }, label = { Text("Confirmar Nova Password") })
+                    }
+                },
+                confirmButton = {
+                    Button(onClick = {
+                        if (newPass != confirmNew) {
+                            Toast.makeText(context, "As senhas não coincidem", Toast.LENGTH_SHORT).show(); return@Button
+                        }
+                        coroutineScope.launch {
+                            try {
+                                val api = RetrofitClient.getApiService(context)
+                                val response = api.updateUserPassword(PasswordUpdateRequest(oldPass, newPass))
+                                if (response.isSuccessful) {
+                                    Toast.makeText(context, "Password alterada com sucesso", Toast.LENGTH_SHORT).show()
+                                } else {
+                                    Toast.makeText(context, "Erro ao alterar password", Toast.LENGTH_LONG).show()
+                                }
+                            } catch (e: Exception) {
+                                e.printStackTrace()
+                                Toast.makeText(context, "Erro de rede: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+                            } finally {
+                                showChangePasswordDialog = false
+                            }
+                        }
+                    }) { Text("Salvar") }
+                },
+                dismissButton = { TextButton(onClick = { showChangePasswordDialog = false }) { Text("Cancelar") } },
+                containerColor = Color(0xFF1E1E1E)
+            )
+        }
+
+        // Dialog para criar categoria
+        if (showCreateCategoryDialog) {
+            var categoryName by remember { mutableStateOf("") }
+            AlertDialog(
+                onDismissRequest = { showCreateCategoryDialog = false },
+                title = { Text("Criar Categoria", color = Color.White) },
+                text = {
+                    Column {
+                        OutlinedTextField(value = categoryName, onValueChange = { categoryName = it }, label = { Text("Nome da Categoria") })
+                    }
+                },
+                confirmButton = {
+                    Button(onClick = {
+                        coroutineScope.launch {
+                            try {
+                                val api = RetrofitClient.getApiService(context)
+                                val response = api.createCategory(CategoryRequest(categoryName))
+                                if (response.isSuccessful) {
+                                    Toast.makeText(context, "Categoria criada", Toast.LENGTH_SHORT).show()
+                                } else {
+                                    Toast.makeText(context, "Erro ao criar categoria", Toast.LENGTH_LONG).show()
+                                }
+                            } catch (e: Exception) {
+                                e.printStackTrace()
+                                Toast.makeText(context, "Erro de rede: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+                            } finally {
+                                showCreateCategoryDialog = false
+                            }
+                        }
+                    }) { Text("Criar") }
+                },
+                dismissButton = { TextButton(onClick = { showCreateCategoryDialog = false }) { Text("Cancelar") } },
+                containerColor = Color(0xFF1E1E1E)
+            )
         }
 
         Spacer(modifier = Modifier.weight(1f))
