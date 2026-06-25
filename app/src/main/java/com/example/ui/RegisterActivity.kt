@@ -222,12 +222,17 @@ fun RegisterScreenContent(
                 onClick = {
                     if (isLoading) return@Button
 
+                    val trimmedEmail = email.trim()
+                    val trimmedName = name.trim()
+                    val trimmedLastName = lastName.trim()
+                    val trimmedPassword = password.trim()
+
                     // Validações básicas
-                    if (email.isEmpty() || password.isEmpty() || name.isEmpty() || lastName.isEmpty()) {
+                    if (trimmedEmail.isEmpty() || trimmedPassword.isEmpty() || trimmedName.isEmpty() || trimmedLastName.isEmpty()) {
                         Toast.makeText(context, "Por favor preencha todos os campos", Toast.LENGTH_SHORT).show()
                         return@Button
                     }
-                    if (password != confirmPassword) {
+                    if (trimmedPassword != confirmPassword.trim()) {
                         Toast.makeText(context, "As senhas não coincidem", Toast.LENGTH_SHORT).show()
                         return@Button
                     }
@@ -235,14 +240,20 @@ fun RegisterScreenContent(
                     isLoading = true
                     coroutineScope.launch {
                         try {
-                            val fullName = "$name $lastName"
                             val apiService = RetrofitClient.getApiService(context)
-                            val response = apiService.register(RegisterRequest(fullName, email, password))
+                            val response = apiService.register(
+                                RegisterRequest(
+                                    name = "$trimmedName $trimmedLastName",
+                                    email = trimmedEmail,
+                                    password = trimmedPassword
+                                )
+                            )
                             if (response.isSuccessful && response.body() != null) {
                                 val authBody = response.body()!!
-                                val token = authBody.token
+                                val token = authBody.token?.replace("\"", "")?.trim()
                                 if (!token.isNullOrEmpty()) {
-                                    onAuthSuccess(token, authBody.name, authBody.email)
+                                    val displayName = authBody.name ?: "$trimmedName $trimmedLastName"
+                                    onAuthSuccess(token, displayName, authBody.email ?: trimmedEmail)
                                 } else {
                                     Toast.makeText(context, "Registo efetuado! Faça login.", Toast.LENGTH_SHORT).show()
                                     onNavigateToLogin()

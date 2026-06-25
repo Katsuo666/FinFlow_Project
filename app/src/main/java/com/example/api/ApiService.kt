@@ -107,11 +107,11 @@ interface ApiService {
     suspend fun updateUserProfile(@Body request: ProfileUpdateRequest): Response<AuthResponse>
 
     @PUT("api/users/avatar")
-    suspend fun updateUserAvatar(@Body request: Map<String, String>): Response<Unit>
+    suspend fun updateUserAvatar(@Body request: Map<String, String>): Response<AuthResponse>
 
     @PUT("api/users/password")
     suspend fun updateUserPassword(@Body request: PasswordUpdateRequest): Response<Unit>
-}
-    @DELETE("api/users/me")
+
+    @DELETE("api/users/profile")
     suspend fun deleteAccount(): Response<Unit>
 }

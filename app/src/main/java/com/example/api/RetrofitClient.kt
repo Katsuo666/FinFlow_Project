@@ -13,6 +13,10 @@ object RetrofitClient {
 
     private var retrofit: Retrofit? = null
 
+    fun reset() {
+        retrofit = null
+    }
+
     fun getApiService(context: Context): ApiService {
         if (retrofit == null) {
             val tokenManager = TokenManager(context.applicationContext)
@@ -27,9 +31,18 @@ object RetrofitClient {
                 .readTimeout(30, TimeUnit.SECONDS)
                 .addInterceptor(logging)
                 .addInterceptor { chain ->
-                    val requestBuilder = chain.request().newBuilder()
+                    val request = chain.request()
+                    val requestBuilder = request.newBuilder()
+                    
+                    // Header obrigatório conforme documentação
+                    requestBuilder.addHeader("Content-Type", "application/json")
+                    requestBuilder.addHeader("Accept", "application/json")
+                    
+                    // NUNCA enviar o token para rotas de autenticação (/api/auth/)
+                    val isAuthRoute = request.url.encodedPath.contains("/api/auth")
                     val token = tokenManager.getToken()
-                    if (!token.isNullOrEmpty()) {
+                    
+                    if (!token.isNullOrEmpty() && !isAuthRoute) {
                         requestBuilder.addHeader("Authorization", "Bearer $token")
                     }
                     chain.proceed(requestBuilder.build())

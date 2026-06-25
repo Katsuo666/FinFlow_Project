@@ -44,53 +44,113 @@ fun RelatoriosScreen(allIncomes: List<Expense>, allExpenses: List<Expense>) {
 
     val today = try {
         java.time.LocalDate.now()
-    } catch (e: Exception) {
+    } catch (_: Exception) {
         java.time.LocalDate.of(2026, 6, 8)
     }
 
     val parseLocalDate = { dateStr: String ->
         try {
             java.time.LocalDate.parse(dateStr)
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             null
         }
     }
 
+    // Lógica de agrupamento simplificada usando a inteligência do modelo Expense
+    val groupedData = remember(allExpenses, allIncomes) {
+        val map = mutableMapOf<String, Double>()
+        
+        allExpenses.forEach { tx ->
+            val cat = tx.displayCategoryName
+            map[cat] = map.getOrDefault(cat, 0.0) + tx.amount
+        }
+        
+        allIncomes.forEach { tx ->
+            val cat = tx.displayCategoryName
+            if (cat.contains("Salário") || cat.contains("Vencimento")) {
+                map["Salário"] = map.getOrDefault("Salário", 0.0) + tx.amount
+            }
+        }
+        map
+    }
+
+    val moradiaAmt = groupedData.entries.filter { it.key.contains("Moradia") }.sumOf { it.value }
+    val alimentacaoAmt = groupedData.getOrDefault("Alimentação", 0.0)
+    val transporteAmt = groupedData.getOrDefault("Transporte", 0.0)
+    val lazerAmt = groupedData.getOrDefault("Lazer", 0.0)
+    val saudeAmt = groupedData.entries.filter { it.key.lowercase().contains("saúde") || it.key.lowercase().contains("saude") }.sumOf { it.value }
+    val salarioAmt = groupedData.getOrDefault("Salário", 0.0)
+    val outrosAmt = groupedData.getOrDefault("Outros", 0.0)
+
+    val totalDistSum = moradiaAmt + alimentacaoAmt + transporteAmt + lazerAmt + saudeAmt + salarioAmt + outrosAmt
+    val pcts = if (totalDistSum > 0.0) {
+        listOf(
+            (moradiaAmt / totalDistSum).toFloat(),
+            (alimentacaoAmt / totalDistSum).toFloat(),
+            (transporteAmt / totalDistSum).toFloat(),
+            (lazerAmt / totalDistSum).toFloat(),
+            (saudeAmt / totalDistSum).toFloat(),
+            (salarioAmt / totalDistSum).toFloat(),
+            (outrosAmt / totalDistSum).toFloat()
+        )
+    } else {
+        listOf(0f, 0f, 0f, 0f, 0f, 0f, 0f)
+    }
+    
+    val moradiaPct = pcts[0]
+    val alimentacaoPct = pcts[1]
+    val transportePct = pcts[2]
+    val lazerPct = pcts[3]
+    val saudePct = pcts[4]
+    val salarioPct = pcts[5]
+    val outrosPct = pcts[6]
+
+    val maxPct = pcts.maxOrNull() ?: 0f
+    val maxPctStr = if (totalDistSum > 0) "${(maxPct * 100).toInt()}%" else "0%"
+
+    val moradiaStr = currencyFormat.format(moradiaAmt)
+    val alimentacaoStr = currencyFormat.format(alimentacaoAmt)
+    val transporteStr = currencyFormat.format(transporteAmt)
+    val lazerStr = currencyFormat.format(lazerAmt)
+    val saudeStr = currencyFormat.format(saudeAmt)
+    val salarioStr = currencyFormat.format(salarioAmt)
+    val outrosStr = currencyFormat.format(outrosAmt)
+
     val chartPoints = remember(allIncomes, allExpenses, selectedPeriod) {
         val formatter = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd")
         val dtfAbbrWeek = java.time.format.DateTimeFormatter.ofPattern("dd/MM")
-        val dtfMonth = java.time.format.DateTimeFormatter.ofPattern("MMM", java.util.Locale("pt", "PT"))
+        val dtfMonth = java.time.format.DateTimeFormatter.ofPattern("MMM", Locale("pt", "PT"))
 
         when (selectedPeriod) {
             "1 Semana" -> {
                 (0..6).map { offset ->
                     val date = today.minusDays((6 - offset).toLong())
                     val dateStr = date.format(formatter)
-                    val incSum = allIncomes.filter { it.date == dateStr }.sumOf { it.amount }
-                    val expSum = allExpenses.filter { it.date == dateStr }.sumOf { it.amount }
+                    val incSum = allIncomes.asSequence().filter { it.date == dateStr }.sumOf { it.amount }
+                    val expSum = allExpenses.asSequence().filter { it.date == dateStr }.sumOf { it.amount }
                     ChartPoint(
                         label = date.format(dtfAbbrWeek),
                         income = incSum,
-                        expense = expSum
+                        expense = expSum,
                     )
                 }
             }
             "1 Mês" -> {
                 (0..3).map { offset ->
-                    val startDay = today.minusDays((29 - offset * 7).toLong())
-                    val endDay = today.minusDays((23 - offset * 7).toLong())
-                    val incSum = allIncomes.filter {
+                    val startDay = today.minusDays((29 - (offset * 7)).toLong())
+                    val endDay = today.minusDays((23 - (offset * 7)).toLong())
+                    val incSum = allIncomes.asSequence().filter {
                         val d = parseLocalDate(it.date)
                         d != null && !d.isBefore(startDay) && !d.isAfter(endDay)
                     }.sumOf { it.amount }
-                    val expSum = allExpenses.filter {
+                    val expSum = allExpenses.asSequence().filter {
                         val d = parseLocalDate(it.date)
                         d != null && !d.isBefore(startDay) && !d.isAfter(endDay)
                     }.sumOf { it.amount }
                     ChartPoint(
                         label = "Sem ${offset + 1}",
                         income = incSum,
-                        expense = expSum
+                        expense = expSum,
                     )
                 }
             }
@@ -153,56 +213,6 @@ fun RelatoriosScreen(allIncomes: List<Expense>, allExpenses: List<Expense>) {
     }
 
     val maxVal = (chartPoints.map { it.income } + chartPoints.map { it.expense }).maxOrNull()?.coerceAtLeast(10.0) ?: 10.0
-
-    // Métricas dinâmicas para Distribuição baseadas em despesas reais agrupadas por nome da categoria
-    var moradiaAmt = 0.0
-    var alimentacaoAmt = 0.0
-    var transporteAmt = 0.0
-    var lazerAmt = 0.0
-    var outrosAmt = 0.0
-
-    allExpenses.forEach { tx ->
-        val cat = tx.displayCategoryName.lowercase()
-        when {
-            cat.contains("moradia") || cat.contains("renda") || cat.contains("contas") || cat.contains("luz") || cat.contains("água") || cat.contains("agua") -> {
-                moradiaAmt += tx.amount
-            }
-            cat.contains("alimenta") || cat.contains("restaurante") || cat.contains("supermercado") || cat.contains("comida") -> {
-                alimentacaoAmt += tx.amount
-            }
-            cat.contains("transporte") || cat.contains("carro") || cat.contains("gasolina") -> {
-                transporteAmt += tx.amount
-            }
-            cat.contains("lazer") || cat.contains("viagem") || cat.contains("diversão") || cat.contains("entretenimento") -> {
-                lazerAmt += tx.amount
-            }
-            else -> {
-                outrosAmt += tx.amount
-            }
-        }
-    }
-
-    val totalExpSum = moradiaAmt + alimentacaoAmt + transporteAmt + lazerAmt + outrosAmt
-    val (moradiaPct, alimentacaoPct, transportePct, lazerPct, outrosPct) = if (totalExpSum > 0.0) {
-        listOf(
-            (moradiaAmt / totalExpSum).toFloat(),
-            (alimentacaoAmt / totalExpSum).toFloat(),
-            (transporteAmt / totalExpSum).toFloat(),
-            (lazerAmt / totalExpSum).toFloat(),
-            (outrosAmt / totalExpSum).toFloat()
-        )
-    } else {
-        listOf(0.20f, 0.20f, 0.20f, 0.20f, 0.20f)
-    }
-
-    val maxPct = maxOf(moradiaPct, alimentacaoPct, transportePct, lazerPct, outrosPct)
-    val maxPctStr = "${(maxPct * 100).toInt()}%"
-
-    val moradiaStr = currencyFormat.format(moradiaAmt)
-    val alimentacaoStr = currencyFormat.format(alimentacaoAmt)
-    val transporteStr = currencyFormat.format(transporteAmt)
-    val lazerStr = currencyFormat.format(lazerAmt)
-    val outrosStr = currencyFormat.format(outrosAmt)
 
     LazyColumn(
         modifier = Modifier
@@ -284,7 +294,7 @@ fun RelatoriosScreen(allIncomes: List<Expense>, allExpenses: List<Expense>) {
             }
         }
 
-        // Pré-visualização do gráfico de fluxo de caixa (Desenhado usando Canvas dinâmico!)
+        // Pré-visualização do gráfico de fluxo de caixa
         item {
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -297,7 +307,6 @@ fun RelatoriosScreen(allIncomes: List<Expense>, allExpenses: List<Expense>) {
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    // Linha seletora de chips
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -327,7 +336,6 @@ fun RelatoriosScreen(allIncomes: List<Expense>, allExpenses: List<Expense>) {
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Gráfico de fluxo de caixa estilizado em canvas
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -336,8 +344,6 @@ fun RelatoriosScreen(allIncomes: List<Expense>, allExpenses: List<Expense>) {
                         Canvas(modifier = Modifier.fillMaxSize()) {
                             val w = size.width
                             val h = size.height
-
-                            // Desenhar linhas de grelha subtis
                             val gridPaintColor = Color(0xFF2A2A2A)
                             for (i in 1..3) {
                                 val y = h * (i / 4f)
@@ -346,7 +352,6 @@ fun RelatoriosScreen(allIncomes: List<Expense>, allExpenses: List<Expense>) {
 
                             val numPoints = chartPoints.size
                             if (numPoints >= 2) {
-                                // Curvas dinâmicas baseadas em entradas/saídas reais
                                 val pathIncomes = Path().apply {
                                     val startY = h - (h * 0.8f * (chartPoints[0].income / maxVal).toFloat())
                                     moveTo(0f, startY)
@@ -355,14 +360,9 @@ fun RelatoriosScreen(allIncomes: List<Expense>, allExpenses: List<Expense>) {
                                         val y = h - (h * 0.8f * (chartPoints[i].income / maxVal).toFloat())
                                         val prevX = w * ((i - 1).toFloat() / (numPoints - 1))
                                         val prevY = h - (h * 0.8f * (chartPoints[i - 1].income / maxVal).toFloat())
-                                        cubicTo(
-                                            prevX + (x - prevX) / 2f, prevY,
-                                            prevX + (x - prevX) / 2f, y,
-                                            x, y
-                                        )
+                                        cubicTo(prevX + (x - prevX) / 2f, prevY, prevX + (x - prevX) / 2f, y, x, y)
                                     }
                                 }
-
                                 val pathExpenses = Path().apply {
                                     val startY = h - (h * 0.8f * (chartPoints[0].expense / maxVal).toFloat())
                                     moveTo(0f, startY)
@@ -371,25 +371,11 @@ fun RelatoriosScreen(allIncomes: List<Expense>, allExpenses: List<Expense>) {
                                         val y = h - (h * 0.8f * (chartPoints[i].expense / maxVal).toFloat())
                                         val prevX = w * ((i - 1).toFloat() / (numPoints - 1))
                                         val prevY = h - (h * 0.8f * (chartPoints[i - 1].expense / maxVal).toFloat())
-                                        cubicTo(
-                                            prevX + (x - prevX) / 2f, prevY,
-                                            prevX + (x - prevX) / 2f, y,
-                                            x, y
-                                        )
+                                        cubicTo(prevX + (x - prevX) / 2f, prevY, prevX + (x - prevX) / 2f, y, x, y)
                                     }
                                 }
-
-                                drawPath(
-                                    path = pathIncomes,
-                                    color = Color(0xFF00E676),
-                                    style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round)
-                                )
-
-                                drawPath(
-                                    path = pathExpenses,
-                                    color = Color(0xFFFFB4AB),
-                                    style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round)
-                                )
+                                drawPath(path = pathIncomes, color = Color(0xFF00E676), style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round))
+                                drawPath(path = pathExpenses, color = Color(0xFFFFB4AB), style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round))
                             }
                         }
                     }
@@ -397,9 +383,7 @@ fun RelatoriosScreen(allIncomes: List<Expense>, allExpenses: List<Expense>) {
                     Spacer(modifier = Modifier.height(10.dp))
 
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 4.dp),
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -429,9 +413,7 @@ fun RelatoriosScreen(allIncomes: List<Expense>, allExpenses: List<Expense>) {
                         Box(modifier = Modifier.size(10.dp).background(Color(0xFF00E676), CircleShape))
                         Spacer(modifier = Modifier.width(6.dp))
                         Text("Entradas", color = Color.LightGray, fontSize = 12.sp)
-
                         Spacer(modifier = Modifier.width(24.dp))
-
                         Box(modifier = Modifier.size(10.dp).background(Color(0xFFFFB4AB), CircleShape))
                         Spacer(modifier = Modifier.width(6.dp))
                         Text("Saídas", color = Color.LightGray, fontSize = 12.sp)
@@ -440,7 +422,7 @@ fun RelatoriosScreen(allIncomes: List<Expense>, allExpenses: List<Expense>) {
             }
         }
 
-        // Visualizador de Distribuição de Despesas
+        // Visualizador de Distribuição de Gastos (Unificado)
         item {
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -456,66 +438,21 @@ fun RelatoriosScreen(allIncomes: List<Expense>, allExpenses: List<Expense>) {
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Pequeno Indicador de Progresso em Rosca
                         Box(
-                            modifier = Modifier
-                                .size(100.dp),
+                            modifier = Modifier.size(100.dp),
                             contentAlignment = Alignment.Center
                         ) {
                             Canvas(modifier = Modifier.size(100.dp)) {
                                 val strokeWidth = 14.dp.toPx()
-                                drawArc(
-                                    color = Color(0xFF2C2C2C),
-                                    startAngle = 0f,
-                                    sweepAngle = 360f,
-                                    useCenter = false,
-                                    style = Stroke(strokeWidth)
-                                )
+                                drawArc(color = Color(0xFF2C2C2C), startAngle = 0f, sweepAngle = 360f, useCenter = false, style = Stroke(strokeWidth))
                                 
-                                // Moradia Arc
-                                drawArc(
-                                    color = Color(0xFF00E676),
-                                    startAngle = -90f,
-                                    sweepAngle = 360f * moradiaPct,
-                                    useCenter = false,
-                                    style = Stroke(strokeWidth, cap = StrokeCap.Round)
-                                )
-
-                                // Alimentação Arc
-                                drawArc(
-                                    color = Color(0xFF45FEC9),
-                                    startAngle = -90f + (360f * moradiaPct),
-                                    sweepAngle = 360f * alimentacaoPct,
-                                    useCenter = false,
-                                    style = Stroke(strokeWidth, cap = StrokeCap.Round)
-                                )
-
-                                // Transporte Arc
-                                drawArc(
-                                    color = Color(0xFFFFDEC4),
-                                    startAngle = -90f + (360f * (moradiaPct + alimentacaoPct)),
-                                    sweepAngle = 360f * transportePct,
-                                    useCenter = false,
-                                    style = Stroke(strokeWidth, cap = StrokeCap.Round)
-                                )
-
-                                // Lazer Arc
-                                drawArc(
-                                    color = Color(0xFFFFB1C1),
-                                    startAngle = -90f + (360f * (moradiaPct + alimentacaoPct + transportePct)),
-                                    sweepAngle = 360f * lazerPct,
-                                    useCenter = false,
-                                    style = Stroke(strokeWidth, cap = StrokeCap.Round)
-                                )
-
-                                // Outros Arc
-                                drawArc(
-                                    color = Color.LightGray,
-                                    startAngle = -90f + (360f * (moradiaPct + alimentacaoPct + transportePct + lazerPct)),
-                                    sweepAngle = 360f * outrosPct,
-                                    useCenter = false,
-                                    style = Stroke(strokeWidth, cap = StrokeCap.Round)
-                                )
+                                drawArc(color = Color(0xFF00E676), startAngle = -90f, sweepAngle = 360f * moradiaPct, useCenter = false, style = Stroke(strokeWidth, cap = StrokeCap.Round))
+                                drawArc(color = Color(0xFF45FEC9), startAngle = -90f + (360f * moradiaPct), sweepAngle = 360f * alimentacaoPct, useCenter = false, style = Stroke(strokeWidth, cap = StrokeCap.Round))
+                                drawArc(color = Color(0xFFFFDEC4), startAngle = -90f + (360f * (moradiaPct + alimentacaoPct)), sweepAngle = 360f * transportePct, useCenter = false, style = Stroke(strokeWidth, cap = StrokeCap.Round))
+                                drawArc(color = Color(0xFFFFB1C1), startAngle = -90f + (360f * (moradiaPct + alimentacaoPct + transportePct)), sweepAngle = 360f * lazerPct, useCenter = false, style = Stroke(strokeWidth, cap = StrokeCap.Round))
+                                drawArc(color = Color(0xFF90CAF9), startAngle = -90f + (360f * (moradiaPct + alimentacaoPct + transportePct + lazerPct)), sweepAngle = 360f * saudePct, useCenter = false, style = Stroke(strokeWidth, cap = StrokeCap.Round))
+                                drawArc(color = Color(0xFFFFEB3B), startAngle = -90f + (360f * (moradiaPct + alimentacaoPct + transportePct + lazerPct + saudePct)), sweepAngle = 360f * salarioPct, useCenter = false, style = Stroke(strokeWidth, cap = StrokeCap.Round))
+                                drawArc(color = Color.LightGray, startAngle = -90f + (360f * (moradiaPct + alimentacaoPct + transportePct + lazerPct + saudePct + salarioPct)), sweepAngle = 360f * outrosPct, useCenter = false, style = Stroke(strokeWidth, cap = StrokeCap.Round))
                             }
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text("MAIOR", color = Color.Gray, fontSize = 10.sp, fontWeight = FontWeight.Bold)
@@ -523,7 +460,6 @@ fun RelatoriosScreen(allIncomes: List<Expense>, allExpenses: List<Expense>) {
                             }
                         }
 
-                        // Métricas de distribuição
                         Column(
                             verticalArrangement = Arrangement.spacedBy(6.dp),
                             modifier = Modifier.padding(start = 16.dp)
@@ -532,6 +468,8 @@ fun RelatoriosScreen(allIncomes: List<Expense>, allExpenses: List<Expense>) {
                             CategoryLegendRow("Alimentação", alimentacaoStr, Color(0xFF45FEC9))
                             CategoryLegendRow("Transporte", transporteStr, Color(0xFFFFDEC4))
                             CategoryLegendRow("Lazer", lazerStr, Color(0xFFFFB1C1))
+                            CategoryLegendRow("Saúde", saudeStr, Color(0xFF90CAF9))
+                            CategoryLegendRow("Salário", salarioStr, Color(0xFFFFEB3B))
                             CategoryLegendRow("Outros", outrosStr, Color.LightGray)
                         }
                     }

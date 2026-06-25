@@ -9,6 +9,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -33,7 +34,7 @@ import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     private lateinit var tokenManager: TokenManager
-    private val resumeEpoch = mutableStateOf(0L)
+    private val resumeEpoch = mutableLongStateOf(0L)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -53,13 +54,17 @@ class MainActivity : ComponentActivity() {
                     tokenManager = tokenManager,
                     onLogout = {
                         tokenManager.clear()
-                        startActivity(Intent(this@MainActivity, LoginActivity::class.java))
+                        RetrofitClient.reset()
+                        val intent = Intent(this@MainActivity, LoginActivity::class.java)
+                        intent.putExtra("LOGOUT", true)
+                        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                        startActivity(intent)
                         finish()
                     },
                     onOpenAddExpense = {
                         startActivity(Intent(this@MainActivity, AddExpenseActivity::class.java))
                     },
-                    resumeEpoch = resumeEpoch.value
+                    resumeEpoch = resumeEpoch.longValue
                 )
             }
         }
@@ -67,7 +72,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        resumeEpoch.value = System.currentTimeMillis()
+        resumeEpoch.longValue = System.currentTimeMillis()
     }
 }
 
@@ -84,7 +89,7 @@ fun MainScreenContainer(
     val context = LocalContext.current
 
     // Estados da API
-    var balance by remember { mutableStateOf(0.0) }
+    var balance by remember { mutableDoubleStateOf(0.0) }
     var totalIncomes by remember { mutableStateOf(0.0) }
     var totalExpenses by remember { mutableStateOf(0.0) }
     var rawRecentTransactions by remember { mutableStateOf(emptyList<Expense>()) }
@@ -92,18 +97,36 @@ fun MainScreenContainer(
     var allExpensesList by remember { mutableStateOf(emptyList<Expense>()) }
     var goalsList by remember { mutableStateOf(emptyList<Goal>()) }
     var creditCardsList by remember { mutableStateOf(emptyList<Card>()) }
-    var isRefreshing by remember { mutableStateOf(false) }
+    var isRefreshing by remember { mutableStateOf(value = false) }
 
     // Estados dos Diálogos
     var showCreateGoalDialog by remember { mutableStateOf(false) }
     var showAddCardDialog by remember { mutableStateOf(false) }
     var selectedDetailCard by remember { mutableStateOf<Card?>(null) }
 
+    var profileRefreshKey by remember { mutableIntStateOf(0) }
+
     // Função para obter todos os dados da API
     val fetchAllData = suspend {
         isRefreshing = true
         try {
             val api = RetrofitClient.getApiService(context)
+
+            // Tentar obter dados do perfil para atualizar imagem e bio
+            try {
+                val profileRes = api.getUserProfile()
+                if (profileRes.isSuccessful && profileRes.body() != null) {
+                    val p = profileRes.body()!!
+                    tokenManager.saveUser(p.name, p.email)
+                    if (p.avatarUrl != null) {
+                        tokenManager.saveProfilePicture(p.avatarUrl)
+                    }
+                    // Forçar atualização do ícone na TopBar
+                    profileRefreshKey++
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
 
             // Obter receitas e despesas
             val incomesRes = api.getIncomes()
@@ -152,7 +175,7 @@ fun MainScreenContainer(
     }
 
     Scaffold(
-        topBar = { MainTopBar(selectedTab) { selectedTab = "perfil" } },
+        topBar = { MainTopBar(tokenManager, { selectedTab = "perfil" }, profileRefreshKey) },
         bottomBar = { MainBottomBar(selectedTab) { selectedTab = it } },
         floatingActionButton = {
             MainFloatingActionButton(
@@ -175,7 +198,6 @@ fun MainScreenContainer(
                     expenses = totalExpenses,
                     recentTransactions = rawRecentTransactions,
                     onViewAllTransactions = { selectedTab = "despesas" },
-                    onRefresh = { coroutineScope.launch { fetchAllData() } },
                     userName = tokenManager.getUserName(),
                     creditCards = creditCardsList,
                     onCardClick = { card -> selectedDetailCard = card },
@@ -183,8 +205,7 @@ fun MainScreenContainer(
                 )
                 "despesas" -> ExpenseListContent()
                 "metas" -> MetasScreen(
-                    goals = goalsList,
-                    onRefresh = { coroutineScope.launch { fetchAllData() } }
+                    goals = goalsList
                 )
                 "relatorios" -> RelatoriosScreen(
                     allIncomes = allIncomesList,
@@ -192,7 +213,8 @@ fun MainScreenContainer(
                 )
                 "perfil" -> PerfilScreen(
                     tokenManager = tokenManager,
-                    onLogout = onLogout
+                    onLogout = onLogout,
+                    onProfileUpdated = { profileRefreshKey++ }
                 )
             }
         }
@@ -227,7 +249,9 @@ fun MainScreenContainer(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun MainTopBar(selectedTab: String, onProfileClick: () -> Unit) {
+private fun MainTopBar(tokenManager: TokenManager, onProfileClick: () -> Unit, refreshKey: Int) {
+    val profilePicUri = remember(refreshKey) { tokenManager.getProfilePicture() }
+    
     TopAppBar(
         title = {
             Row(
@@ -241,12 +265,23 @@ private fun MainTopBar(selectedTab: String, onProfileClick: () -> Unit) {
                         .clickable { onProfileClick() },
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Person,
-                        contentDescription = "Utilizador",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(20.dp)
-                    )
+                    if (profilePicUri != null) {
+                        coil.compose.AsyncImage(
+                            model = profilePicUri,
+                            contentDescription = "Foto de Perfil",
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(CircleShape),
+                            contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Default.Person,
+                            contentDescription = "Utilizador",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
                 }
                 Text(
                     text = "FinFlow",

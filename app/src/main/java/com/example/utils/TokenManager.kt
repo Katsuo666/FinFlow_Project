@@ -10,6 +10,7 @@ class TokenManager(context: Context) {
         private const val KEY_TOKEN = "jwt_token"
         private const val KEY_USER_NAME = "user_name"
         private const val KEY_USER_EMAIL = "user_email"
+        private const val KEY_USER_BIO = "user_bio"
     }
 
     fun saveToken(token: String?) {
@@ -17,15 +18,21 @@ class TokenManager(context: Context) {
     }
 
     fun getToken(): String? {
-        return prefs.getString(KEY_TOKEN, null)
+        val token = prefs.getString(KEY_TOKEN, null)
+        return token?.replace("\"", "")?.trim()
     }
 
-    fun saveUser(name: String?, email: String?) {
+    fun saveUser(name: String?, email: String?, bio: String? = null) {
         prefs.edit().apply {
             putString(KEY_USER_NAME, name)
             putString(KEY_USER_EMAIL, email)
+            if (bio != null) putString(KEY_USER_BIO, bio)
             apply()
         }
+    }
+
+    fun getUserBio(): String {
+        return prefs.getString(KEY_USER_BIO, "") ?: ""
     }
 
     fun getUserName(): String {

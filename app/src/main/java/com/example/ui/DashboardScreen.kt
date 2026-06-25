@@ -9,6 +9,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.TrendingDown
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -32,11 +34,10 @@ fun DashboardScreen(
     expenses: Double,
     recentTransactions: List<Expense>,
     onViewAllTransactions: () -> Unit,
-    onRefresh: () -> Unit,
     userName: String,
     creditCards: List<Card>,
     onCardClick: (Card) -> Unit,
-    onAddCardClick: () -> Unit
+    onAddCardClick: () -> Unit,
 ) {
     val currencyFormat = NumberFormat.getCurrencyInstance(Locale("pt", "PT")).apply {
         currency = java.util.Currency.getInstance("EUR")
@@ -106,7 +107,7 @@ fun DashboardScreen(
                     val absPercent = if (percentValue < 0.0) -percentValue else percentValue
                     val percentString = String.format(Locale.US, "%.1f", absPercent)
                     val percentText = if (isPositive) "+$percentString% este mês" else "-$percentString% este mês"
-                    val trendIcon = if (isPositive) Icons.Default.TrendingUp else Icons.Default.TrendingDown
+                    val trendIcon = if (isPositive) Icons.AutoMirrored.Filled.TrendingUp else Icons.AutoMirrored.Filled.TrendingDown
                     val trendColor = if (isPositive) Color(0xFF00E676) else Color(0xFFFF5252)
 
                     Spacer(modifier = Modifier.height(12.dp))
@@ -336,7 +337,7 @@ fun DashboardScreen(
                                 fontWeight = FontWeight.Bold
                             )
 
-                            if (card.type.uppercase() == "CREDIT" && limitVal > 0.0) {
+                            if ((card.type.uppercase() == "CREDIT") && (limitVal > 0.0)) {
                                 Spacer(modifier = Modifier.height(16.dp))
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
@@ -349,7 +350,7 @@ fun DashboardScreen(
                                 val progress = (billAmount / limitVal).coerceIn(0.0, 1.0).toFloat()
                                 Spacer(modifier = Modifier.height(4.dp))
                                 LinearProgressIndicator(
-                                    progress = progress,
+                                    progress = { progress },
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .height(6.dp),

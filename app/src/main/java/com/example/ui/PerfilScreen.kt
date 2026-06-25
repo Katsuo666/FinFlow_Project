@@ -1,16 +1,23 @@
 package com.example.ui
 
+import android.content.Intent
+import android.util.Base64
 import android.widget.Toast
+import java.io.InputStream
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -18,12 +25,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.example.api.RetrofitClient
 import com.example.model.CategoryRequest
 import com.example.model.PasswordUpdateRequest
@@ -35,53 +42,48 @@ import kotlinx.coroutines.launch
 @Composable
 fun PerfilScreen(
     tokenManager: TokenManager,
-    onLogout: () -> Unit
+    onLogout: () -> Unit,
+    onProfileUpdated: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     var profilePicUri by remember { mutableStateOf(tokenManager.getProfilePicture()) }
-    var showDeleteConfirm by remember { mutableStateOf(false) }
-    var isDeleting by remember { mutableStateOf(false) }
-    var showEditProfileDialog by remember { mutableStateOf(false) }
-    var showChangePasswordDialog by remember { mutableStateOf(false) }
-    var showCreateCategoryDialog by remember { mutableStateOf(false) }
+    var userBio by remember { mutableStateOf(tokenManager.getUserBio()) }
+    var showDeleteConfirm by remember { mutableStateOf(value = false) }
+    var isDeleting by remember { mutableStateOf(value = false) }
+    var showEditProfileDialog by remember { mutableStateOf(value = false) }
+    var showChangePasswordDialog by remember { mutableStateOf(value = false) }
+    var showCreateCategoryDialog by remember { mutableStateOf(value = false) }
 
     val launcher = rememberLauncherForActivityResult(
-        contract = androidx.activity.result.contract.ActivityResultContracts.GetContent()
+        contract = ActivityResultContracts.PickVisualMedia()
     ) { uri: android.net.Uri? ->
         if (uri != null) {
-            try {
-                val takeFlags: Int = android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
-                context.contentResolver.takePersistableUriPermission(uri, takeFlags)
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-            profilePicUri = uri.toString()
-            tokenManager.saveProfilePicture(uri.toString())
-            Toast.makeText(context, "Foto de perfil atualizada!", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    val profileBitmap = remember(profilePicUri) {
-        if (profilePicUri != null) {
-            try {
-                val contentResolver = context.contentResolver
-                val uri = android.net.Uri.parse(profilePicUri)
-                if (android.os.Build.VERSION.SDK_INT >= 28) {
-                    val source = android.graphics.ImageDecoder.createSource(contentResolver, uri)
-                    android.graphics.ImageDecoder.decodeBitmap(source) { decoder, _, _ ->
-                        decoder.isMutableRequired = true
-                    }.asImageBitmap()
-                } else {
-                    @Suppress("DEPRECATION")
-                    android.provider.MediaStore.Images.Media.getBitmap(contentResolver, uri).asImageBitmap()
+            coroutineScope.launch {
+                try {
+                    val inputStream: InputStream? = context.contentResolver.openInputStream(uri)
+                    val bytes = inputStream?.readBytes()
+                    if (bytes != null) {
+                        val base64Image = "data:image/png;base64," + Base64.encodeToString(bytes, Base64.NO_WRAP)
+                        val api = RetrofitClient.getApiService(context)
+                        val response = api.updateUserAvatar(mapOf("avatarUrl" to base64Image))
+                        if (response.isSuccessful) {
+                            val updatedProfile = response.body()
+                            val finalUrl = updatedProfile?.avatarUrl ?: base64Image
+                            
+                            profilePicUri = finalUrl
+                            tokenManager.saveProfilePicture(finalUrl)
+                            onProfileUpdated()
+                            Toast.makeText(context, "Foto de perfil atualizada!", Toast.LENGTH_SHORT).show()
+                        } else {
+                            Toast.makeText(context, "Erro ao salvar foto no servidor", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    Toast.makeText(context, "Erro ao processar imagem", Toast.LENGTH_SHORT).show()
                 }
-            } catch (e: Exception) {
-                e.printStackTrace()
-                null
             }
-        } else {
-            null
         }
     }
 
@@ -139,44 +141,47 @@ fun PerfilScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Acento visual do avatar com clique para carregar e indicador de edição
+    // Acento visual do avatar com clique para carregar e indicador de edição
+    Box(
+        modifier = Modifier
+            .size(110.dp)
+            .clickable {
+                launcher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+            },
+        contentAlignment = Alignment.Center
+    ) {
         Box(
             modifier = Modifier
-                .size(110.dp)
-                .clickable { launcher.launch("image/*") },
+                .size(100.dp)
+                .background(Color(0xFF1E1E1E), shape = CircleShape)
+                .border(2.dp, MaterialTheme.colorScheme.primary, CircleShape),
             contentAlignment = Alignment.Center
         ) {
-            Box(
-                modifier = Modifier
-                    .size(100.dp)
-                    .background(Color(0xFF1E1E1E), shape = CircleShape)
-                    .border(2.dp, MaterialTheme.colorScheme.primary, CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                if (profileBitmap != null) {
-                    Image(
-                        bitmap = profileBitmap,
-                        contentDescription = "Foto de perfil",
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .clip(CircleShape),
-                        contentScale = ContentScale.Crop
-                    )
-                } else {
-                    Icon(
-                        imageVector = Icons.Default.Person,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(56.dp)
-                    )
-                }
+            if (profilePicUri != null) {
+                AsyncImage(
+                    model = profilePicUri,
+                    contentDescription = "Foto de perfil",
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(CircleShape),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Default.Person,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(56.dp)
+                )
             }
+        }
 
             Box(
                 modifier = Modifier
@@ -228,6 +233,8 @@ fun PerfilScreen(
                 HorizontalDivider(color = Color(0xFF2C2C2C))
                 ProfileDetailRow(label = "Idioma", value = "Português (Portugal)")
                 HorizontalDivider(color = Color(0xFF2C2C2C))
+                ProfileDetailRow(label = "Bio", value = userBio.ifEmpty { "Sem biografia" })
+                HorizontalDivider(color = Color(0xFF2C2C2C))
                 ProfileDetailRow(label = "Tipo de Conta", value = "Utilizador Standard")
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -244,7 +251,7 @@ fun PerfilScreen(
         // Diálogo de Editar Perfil
         if (showEditProfileDialog) {
             var firstName by remember { mutableStateOf(tokenManager.getUserName().split(" ").firstOrNull() ?: "") }
-            var lastNameDialog by remember { mutableStateOf(tokenManager.getUserName().split(" ").drop(1).joinToString(" ")) }
+            var lastNameDialog by remember { mutableStateOf(tokenManager.getUserName().split(" ").asSequence().drop(1).joinToString(" ")) }
             var bio by remember { mutableStateOf("") }
             AlertDialog(
                 onDismissRequest = { showEditProfileDialog = false },
@@ -266,7 +273,8 @@ fun PerfilScreen(
                                 val response = api.updateUserProfile(ProfileUpdateRequest(firstName, lastNameDialog, bio))
                                 if (response.isSuccessful && response.body() != null) {
                                     val body = response.body()!!
-                                    tokenManager.saveUser(body.name ?: "", body.email ?: "")
+                                    tokenManager.saveUser(body.name ?: "", body.email ?: "", bio)
+                                    userBio = bio
                                     Toast.makeText(context, "Perfil atualizado", Toast.LENGTH_SHORT).show()
                                 } else {
                                     Toast.makeText(context, "Erro ao atualizar perfil", Toast.LENGTH_LONG).show()
@@ -411,7 +419,7 @@ fun PerfilScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Icon(
-                    imageVector = Icons.Default.ExitToApp,
+                    imageVector = Icons.AutoMirrored.Filled.ExitToApp,
                     contentDescription = null,
                     tint = Color.White
                 )

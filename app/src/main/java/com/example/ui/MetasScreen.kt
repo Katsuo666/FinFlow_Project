@@ -21,12 +21,10 @@ import java.util.Locale
 
 // ---------------- ECRÃ DO SEPARADOR METAS ----------------
 @Composable
-fun MetasScreen(goals: List<Goal>, onRefresh: () -> Unit) {
+fun MetasScreen(goals: List<Goal>) {
     val currencyFormat = NumberFormat.getCurrencyInstance(Locale("pt", "PT")).apply {
         currency = java.util.Currency.getInstance("EUR")
     }
-
-    val displayGoals = goals
 
     val totalCurrent = goals.sumOf { it.currentAmount }
     val totalTarget = goals.sumOf { it.targetAmount }
@@ -86,24 +84,24 @@ fun MetasScreen(goals: List<Goal>, onRefresh: () -> Unit) {
                 Card(
                     modifier = Modifier.weight(1f),
                     colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E)),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(12.dp),
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Icon(Icons.Default.Flag, contentDescription = "Ativas", tint = Color(0xFF00E676))
                         Spacer(modifier = Modifier.height(8.dp))
-                        Text("$activeCount", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                        Text(activeCount.toString(), color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
                         Text("Metas Ativas", color = Color.Gray, fontSize = 12.sp)
                     }
                 }
                 Card(
                     modifier = Modifier.weight(1f),
                     colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E)),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(12.dp),
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Icon(Icons.Default.EmojiEvents, contentDescription = "Concluídas", tint = Color(0xFF45FEC9))
                         Spacer(modifier = Modifier.height(8.dp))
-                        Text("$completedCount", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                        Text(completedCount.toString(), color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
                         Text("Concluída", color = Color.Gray, fontSize = 12.sp)
                     }
                 }
@@ -111,12 +109,12 @@ fun MetasScreen(goals: List<Goal>, onRefresh: () -> Unit) {
         }
 
         // Detalhes das metas
-        if (displayGoals.isEmpty()) {
+        if (goals.isEmpty()) {
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E)),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(12.dp),
                 ) {
                     Box(
                         modifier = Modifier
@@ -134,7 +132,7 @@ fun MetasScreen(goals: List<Goal>, onRefresh: () -> Unit) {
                 }
             }
         } else {
-            items(displayGoals) { goal ->
+            items(goals) { goal ->
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E)),
@@ -197,12 +195,12 @@ fun MetasScreen(goals: List<Goal>, onRefresh: () -> Unit) {
                         Spacer(modifier = Modifier.height(8.dp))
 
                         LinearProgressIndicator(
-                            progress = progress,
+                            progress = { progress },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(8.dp),
                             color = Color(0xFF00E676),
-                            trackColor = Color(0xFF2C2C2C)
+                            trackColor = Color(0xFF2C2C2C),
                         )
                     }
                 }

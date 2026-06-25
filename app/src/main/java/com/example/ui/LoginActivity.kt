@@ -48,8 +48,12 @@ class LoginActivity : ComponentActivity() {
         enableEdgeToEdge()
         tokenManager = TokenManager(this)
 
+        // Limpar o cache do Retrofit para garantir que novos logins não usem dados antigos
+        RetrofitClient.reset()
+
         // Se já estiver logado, ignorar a LoginActivity
-        if (tokenManager.getToken() != null) {
+        val isLoggingOut = intent.getBooleanExtra("LOGOUT", false)
+        if (!isLoggingOut && tokenManager.getToken() != null) {
             startActivity(Intent(this, MainActivity::class.java))
             finish()
             return
@@ -61,17 +65,15 @@ class LoginActivity : ComponentActivity() {
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(innerPadding)
+                            .padding(innerPadding),
                     ) {
-                        LoginScreenContent(
-                            onAuthSuccess = { token, name, email ->
-                                tokenManager.saveToken(token)
-                                tokenManager.saveUser(name, email)
-                                Toast.makeText(this@LoginActivity, "Bem-vindo!", Toast.LENGTH_SHORT).show()
-                                startActivity(Intent(this@LoginActivity, MainActivity::class.java))
-                                finish()
-                            }
-                        )
+                        LoginScreenContent { token, name, email ->
+                            tokenManager.saveToken(token)
+                            tokenManager.saveUser(name, email)
+                            Toast.makeText(this@LoginActivity, "Bem-vindo!", Toast.LENGTH_SHORT).show()
+                            startActivity(Intent(this@LoginActivity, MainActivity::class.java))
+                            finish()
+                        }
                     }
                 }
             }
@@ -134,8 +136,8 @@ fun LoginScreenContent(onAuthSuccess: (String, String?, String?) -> Unit) {
 
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
-    var passwordVisible by remember { mutableStateOf(false) }
-    var isLoading by remember { mutableStateOf(false) }
+    var passwordVisible by remember { mutableStateOf(value = false) }
+    var isLoading by remember { mutableStateOf(value = false) }
 
     Box(
         modifier = Modifier
@@ -231,7 +233,10 @@ fun LoginScreenContent(onAuthSuccess: (String, String?, String?) -> Unit) {
                 onClick = {
                     if (isLoading) return@Button
 
-                    if (email.isEmpty() || password.isEmpty()) {
+                    val trimmedEmail = email.trim()
+                    val trimmedPassword = password.trim()
+
+                    if (trimmedEmail.isEmpty() || trimmedPassword.isEmpty()) {
                         Toast.makeText(context, "Por favor preencha todos os campos", Toast.LENGTH_SHORT).show()
                         return@Button
                     }
@@ -240,18 +245,24 @@ fun LoginScreenContent(onAuthSuccess: (String, String?, String?) -> Unit) {
                     coroutineScope.launch {
                         try {
                             val apiService = RetrofitClient.getApiService(context)
-                            val response = apiService.login(LoginRequest(email, password))
+                            val response = apiService.login(LoginRequest(trimmedEmail, trimmedPassword))
                             if (response.isSuccessful && response.body() != null) {
                                 val authBody = response.body()!!
-                                val token = authBody.token
+                                val token = authBody.token?.replace("\"", "")?.trim()
                                 if (!token.isNullOrEmpty()) {
-                                    onAuthSuccess(token, authBody.name, authBody.email)
+                                    val displayName = authBody.name ?: "Utilizador"
+                                    onAuthSuccess(token, displayName, authBody.email ?: trimmedEmail)
                                 } else {
                                     Toast.makeText(context, "Erro: Sem token na resposta", Toast.LENGTH_LONG).show()
                                 }
                             } else {
-                                val errorMsg = response.errorBody()?.string() ?: "Credenciais inválidas"
-                                Toast.makeText(context, "Erro no login: $errorMsg", Toast.LENGTH_LONG).show()
+                                val errorRaw = response.errorBody()?.string() ?: ""
+                                val errorDisplay = if (errorRaw.contains("Utilizador não encontrado")) {
+                                    "Utilizador não encontrado. Verifique o e-mail ou registe-se."
+                                } else {
+                                    errorRaw.ifEmpty { "Credenciais inválidas" }
+                                }
+                                Toast.makeText(context, "Erro no login: $errorDisplay", Toast.LENGTH_LONG).show()
                             }
                         } catch (e: Exception) {
                             e.printStackTrace()
