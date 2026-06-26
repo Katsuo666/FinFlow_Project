@@ -1,7 +1,7 @@
 package com.example.ui
 
-import androidx.compose.foundation.background
 import android.widget.Toast
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -38,10 +38,10 @@ fun MetasScreen(goals: List<Goal>, onGoalUpdated: () -> Unit = {}) {
     var goalToEdit by remember { mutableStateOf<Goal?>(null) }
     var newCurrentAmount by remember { mutableStateOf("") }
     var isUpdating by remember { mutableStateOf(false) }
+    
+    var goalToDelete by remember { mutableStateOf<Goal?>(null) }
+    var isDeleting by remember { mutableStateOf(false) }
 
-    val totalCurrent = goals.sumOf { it.currentAmount }
-    val totalTarget = goals.sumOf { it.targetAmount }
-    val progressPercent = if (totalTarget > 0) ((totalCurrent / totalTarget) * 100).toInt() else 0
     val activeCount = goals.count { it.currentAmount < it.targetAmount }
     val completedCount = goals.count { it.currentAmount >= it.targetAmount }
 
@@ -67,26 +67,7 @@ fun MetasScreen(goals: List<Goal>, onGoalUpdated: () -> Unit = {}) {
             )
         }
 
-        // Cartão do Total Guardado
-        item {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E)),
-                shape = RoundedCornerShape(16.dp)
-            ) {
-                Column(modifier = Modifier.padding(20.dp)) {
-                    Text("TOTAL GUARDADO", color = Color.Gray, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        currencyFormat.format(totalCurrent),
-                        color = Color.White,
-                        fontSize = 32.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text("De ${currencyFormat.format(totalTarget)} ($progressPercent%)", color = Color.LightGray, fontSize = 12.sp)
-                }
-            }
-        }
+        // Removido o Cartão do Total Guardado conforme solicitado
 
         // Caixas de estatísticas
         item {
@@ -146,6 +127,7 @@ fun MetasScreen(goals: List<Goal>, onGoalUpdated: () -> Unit = {}) {
             }
         } else {
             items(goals) { goal ->
+                val isCompleted = goal.currentAmount >= goal.targetAmount
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -166,10 +148,14 @@ fun MetasScreen(goals: List<Goal>, onGoalUpdated: () -> Unit = {}) {
                                 Box(
                                     modifier = Modifier
                                         .size(40.dp)
-                                        .background(Color(0xFF2C2C2C), shape = RoundedCornerShape(8.dp)),
+                                        .background(if (isCompleted) Color(0xFF003918) else Color(0xFF2C2C2C), shape = RoundedCornerShape(8.dp)),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    Icon(Icons.Default.Star, contentDescription = "Goal", tint = Color(0xFF00E676))
+                                    Icon(
+                                        imageVector = if (isCompleted) Icons.Default.CheckCircle else Icons.Default.Star, 
+                                        contentDescription = "Goal", 
+                                        tint = if (isCompleted) Color(0xFF00E676) else Color(0xFF00E676)
+                                    )
                                 }
                                 Column {
                                     Text(goal.name, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
@@ -179,12 +165,19 @@ fun MetasScreen(goals: List<Goal>, onGoalUpdated: () -> Unit = {}) {
                                                 .background(Color(0xFF003918), shape = RoundedCornerShape(4.dp))
                                                 .padding(horizontal = 6.dp, vertical = 2.dp)
                                         ) {
-                                            Text("Lazer", color = Color(0xFF00E676), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                            Text("Progresso", color = Color(0xFF00E676), fontSize = 10.sp, fontWeight = FontWeight.Bold)
                                         }
                                         if (!goal.deadline.isNullOrEmpty()) {
                                             Text(goal.deadline, color = Color.Gray, fontSize = 11.sp)
                                         }
                                     }
+                                }
+                            }
+                            
+                            // Botão de eliminar (visível se concluída ou opcional para todas)
+                            if (isCompleted) {
+                                IconButton(onClick = { goalToDelete = goal }) {
+                                    Icon(Icons.Default.Delete, contentDescription = "Eliminar", tint = Color(0xFFFFB4AB))
                                 }
                             }
                         }
@@ -204,7 +197,7 @@ fun MetasScreen(goals: List<Goal>, onGoalUpdated: () -> Unit = {}) {
                             )
                             Text(
                                 "${(progress * 100).toInt()}%",
-                                color = Color(0xFF00E676),
+                                color = if (isCompleted) Color(0xFF00E676) else Color(0xFF00E676),
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold
                             )
@@ -213,11 +206,11 @@ fun MetasScreen(goals: List<Goal>, onGoalUpdated: () -> Unit = {}) {
                         Spacer(modifier = Modifier.height(8.dp))
 
                         LinearProgressIndicator(
-                            progress = { progress },
+                            progress = { progress.coerceIn(0f, 1f) },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(8.dp),
-                            color = Color(0xFF00E676),
+                            color = if (isCompleted) Color(0xFF00E676) else Color(0xFF00E676),
                             trackColor = Color(0xFF2C2C2C),
                         )
                     }
@@ -282,8 +275,63 @@ fun MetasScreen(goals: List<Goal>, onGoalUpdated: () -> Unit = {}) {
                 }
             },
             dismissButton = {
-                TextButton(onClick = { goalToEdit = null }, enabled = !isUpdating) {
-                    Text("Cancelar", color = Color.Gray)
+                Row {
+                    // Botão de eliminar dentro do edit (opcional)
+                    TextButton(onClick = { 
+                        goalToDelete = goalToEdit
+                        goalToEdit = null
+                    }) {
+                        Text("Eliminar", color = Color(0xFFFFB4AB))
+                    }
+                    TextButton(onClick = { goalToEdit = null }, enabled = !isUpdating) {
+                        Text("Cancelar", color = Color.LightGray)
+                    }
+                }
+            },
+            containerColor = Color(0xFF1E1E1E)
+        )
+    }
+
+    // Diálogo de confirmação de eliminação
+    if (goalToDelete != null) {
+        AlertDialog(
+            onDismissRequest = { if (!isDeleting) goalToDelete = null },
+            title = { Text("Eliminar Meta", color = Color.White) },
+            text = { Text("Tem a certeza que deseja eliminar a meta '${goalToDelete?.name}'?", color = Color.LightGray) },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (goalToDelete != null) {
+                            isDeleting = true
+                            coroutineScope.launch {
+                                try {
+                                    val api = RetrofitClient.getApiService(context)
+                                    val response = api.deleteGoal(goalToDelete!!.id!!)
+                                    if (response.isSuccessful) {
+                                        Toast.makeText(context, "Meta eliminada!", Toast.LENGTH_SHORT).show()
+                                        onGoalUpdated()
+                                        goalToDelete = null
+                                    } else {
+                                        Toast.makeText(context, "Erro ao eliminar", Toast.LENGTH_SHORT).show()
+                                    }
+                                } catch (e: Exception) {
+                                    Toast.makeText(context, "Erro de rede", Toast.LENGTH_SHORT).show()
+                                } finally {
+                                    isDeleting = false
+                                }
+                            }
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFBA1A1A)),
+                    enabled = !isDeleting
+                ) {
+                    if (isDeleting) CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                    else Text("Eliminar")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { goalToDelete = null }, enabled = !isDeleting) {
+                    Text("Cancelar", color = Color.LightGray)
                 }
             },
             containerColor = Color(0xFF1E1E1E)

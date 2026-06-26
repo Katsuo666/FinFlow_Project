@@ -89,11 +89,11 @@ fun RelatoriosScreen(allIncomes: List<Expense>, allExpenses: List<Expense>) {
         map
     }
 
-    val moradiaAmt = groupedData.entries.filter { it.key.contains("Moradia") }.sumOf { it.value }
+    val moradiaAmt = groupedData.entries.asSequence().filter { it.key.contains("Moradia") }.sumOf { it.value }
     val alimentacaoAmt = groupedData.getOrDefault("Alimentação", 0.0)
     val transporteAmt = groupedData.getOrDefault("Transporte", 0.0)
     val lazerAmt = groupedData.getOrDefault("Lazer", 0.0)
-    val saudeAmt = groupedData.entries.filter { it.key.lowercase().contains("saúde") || it.key.lowercase().contains("saude") }.sumOf { it.value }
+    val saudeAmt = groupedData.entries.asSequence().filter { it.key.lowercase().contains("saúde") || it.key.lowercase().contains("saude") }.sumOf { it.value }
     val salarioAmt = groupedData.getOrDefault("Salário", 0.0)
     val outrosAmt = groupedData.getOrDefault("Outros", 0.0)
 
@@ -156,11 +156,11 @@ fun RelatoriosScreen(allIncomes: List<Expense>, allExpenses: List<Expense>) {
                     val endDay = today.minusDays((23 - (offset * 7)).toLong())
                     val incSum = allIncomes.asSequence().filter {
                         val d = parseLocalDate(it.date)
-                        d != null && !d.isBefore(startDay) && !d.isAfter(endDay)
+                        (d != null) && !d.isBefore(startDay) && !d.isAfter(endDay)
                     }.sumOf { it.amount }
                     val expSum = allExpenses.asSequence().filter {
                         val d = parseLocalDate(it.date)
-                        d != null && !d.isBefore(startDay) && !d.isAfter(endDay)
+                        (d != null) && !d.isBefore(startDay) && !d.isAfter(endDay)
                     }.sumOf { it.amount }
                     ChartPoint(
                         label = "Sem ${offset + 1}",
@@ -602,10 +602,10 @@ private fun generateAndSharePDF(
     paint.textSize = 14f
     paint.isFakeBoldText = false
     canvas.drawText("Total Entradas:", 50f, 220f, paint)
-    canvas.drawText("${incomes} €", 200f, 220f, paint)
+    canvas.drawText("$incomes €", 200f, 220f, paint)
     
     canvas.drawText("Total Saídas:", 50f, 240f, paint)
-    canvas.drawText("${expenses} €", 200f, 240f, paint)
+    canvas.drawText("$expenses €", 200f, 240f, paint)
     
     paint.isFakeBoldText = true
     canvas.drawText("Saldo Líquido:", 50f, 260f, paint)
