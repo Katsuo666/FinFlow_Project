@@ -177,7 +177,10 @@ fun ExpenseListContent(resumeEpoch: Long = 0L) {
 
             // Mapear e combinar
             transactions = (exps.map { it.copy(isIncome = false) } + incs.map { it.copy(isIncome = true) })
-                .sortedByDescending { it.date }
+                .sortedWith(
+                    compareByDescending<Expense> { it.date }
+                        .thenByDescending { it.id ?: 0 }
+                )
         } catch (e: Exception) {
             e.printStackTrace()
             transactions = emptyList()

@@ -1,18 +1,15 @@
 package com.example.ui
 
 import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.util.Base64
+import android.util.Log
 import android.widget.Toast
-import java.io.InputStream
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -25,18 +22,22 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
 import com.example.api.RetrofitClient
 import com.example.model.CategoryRequest
 import com.example.model.PasswordUpdateRequest
 import com.example.model.ProfileUpdateRequest
 import com.example.utils.TokenManager
 import kotlinx.coroutines.launch
+import java.io.ByteArrayOutputStream
+import java.io.File
+import java.io.FileOutputStream
+import java.io.InputStream
 
 // ---------------- ECRÃ DO SEPARADOR PERFIL ----------------
 @Composable
@@ -47,7 +48,7 @@ fun PerfilScreen(
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
-    var profilePicUri by remember { mutableStateOf(tokenManager.getProfilePicture()) }
+    var profileBitmap by remember { mutableStateOf(tokenManager.getProfileBitmap()) }
     var userBio by remember { mutableStateOf(tokenManager.getUserBio()) }
     var showDeleteConfirm by remember { mutableStateOf(value = false) }
     var isDeleting by remember { mutableStateOf(value = false) }
@@ -62,22 +63,43 @@ fun PerfilScreen(
             coroutineScope.launch {
                 try {
                     val inputStream: InputStream? = context.contentResolver.openInputStream(uri)
-                    val bytes = inputStream?.readBytes()
-                    if (bytes != null) {
-                        val base64Image = "data:image/png;base64," + Base64.encodeToString(bytes, Base64.NO_WRAP)
-                        val api = RetrofitClient.getApiService(context)
-                        val response = api.updateUserAvatar(mapOf("avatarUrl" to base64Image))
-                        if (response.isSuccessful) {
-                            val updatedProfile = response.body()
-                            val finalUrl = updatedProfile?.avatarUrl ?: base64Image
-                            
-                            profilePicUri = finalUrl
-                            tokenManager.saveProfilePicture(finalUrl)
-                            onProfileUpdated()
-                            Toast.makeText(context, "Foto de perfil atualizada!", Toast.LENGTH_SHORT).show()
+                    val originalBitmap = BitmapFactory.decodeStream(inputStream)
+                    
+                    if (originalBitmap != null) {
+                        // 1. Redimensionar mais agressivamente para garantir estabilidade (300x300)
+                        val scaledBitmap = if (originalBitmap.width > 300 || originalBitmap.height > 300) {
+                            val ratio = originalBitmap.width.toFloat() / originalBitmap.height.toFloat()
+                            val targetWidth = if (ratio > 1) 300 else (300 * ratio).toInt()
+                            val targetHeight = if (ratio > 1) (300 / ratio).toInt() else 300
+                            Bitmap.createScaledBitmap(originalBitmap, targetWidth, targetHeight, true)
                         } else {
-                            Toast.makeText(context, "Erro ao salvar foto no servidor", Toast.LENGTH_SHORT).show()
+                            originalBitmap
                         }
+
+                        val outputStream = ByteArrayOutputStream()
+                        scaledBitmap.compress(Bitmap.CompressFormat.JPEG, 60, outputStream)
+                        val bytes = outputStream.toByteArray()
+                        
+                        // 2. Converter para Base64 com prefixo correto
+                        val base64Image = "data:image/jpeg;base64," + Base64.encodeToString(bytes, Base64.NO_WRAP)
+                        
+                        // Guardar IMEDIATAMENTE e atualizar o Bitmap nativo
+                        tokenManager.saveProfilePicture(base64Image)
+                        profileBitmap = scaledBitmap
+                        onProfileUpdated()
+
+                        // 3. Enviar para o servidor em background
+                        coroutineScope.launch {
+                            try {
+                                val api = RetrofitClient.getApiService(context)
+                                val response = api.updateUserAvatar(mapOf("avatarUrl" to base64Image))
+                                Log.d("PERFIL", "Resposta servidor: ${response.code()}")
+                            } catch (apiEx: Exception) {
+                                Log.e("PERFIL", "Erro ao sincronizar com servidor: ${apiEx.message}")
+                            }
+                        }
+                        
+                        Toast.makeText(context, "Foto de perfil atualizada!", Toast.LENGTH_SHORT).show()
                     }
                 } catch (e: Exception) {
                     e.printStackTrace()
@@ -164,9 +186,9 @@ fun PerfilScreen(
                 .border(2.dp, MaterialTheme.colorScheme.primary, CircleShape),
             contentAlignment = Alignment.Center
         ) {
-            if (profilePicUri != null) {
-                AsyncImage(
-                    model = profilePicUri,
+            if (profileBitmap != null) {
+                Image(
+                    bitmap = profileBitmap!!.asImageBitmap(),
                     contentDescription = "Foto de perfil",
                     modifier = Modifier
                         .fillMaxSize()
@@ -229,11 +251,11 @@ fun PerfilScreen(
                 modifier = Modifier.padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
+                ProfileDetailRow(label = "Bio", value = userBio.ifEmpty { "Sem biografia" })
+                HorizontalDivider(color = Color(0xFF2C2C2C))
                 ProfileDetailRow(label = "Aplicação", value = "FinFlow Mobile")
                 HorizontalDivider(color = Color(0xFF2C2C2C))
                 ProfileDetailRow(label = "Idioma", value = "Português (Portugal)")
-                HorizontalDivider(color = Color(0xFF2C2C2C))
-                ProfileDetailRow(label = "Bio", value = userBio.ifEmpty { "Sem biografia" })
                 HorizontalDivider(color = Color(0xFF2C2C2C))
                 ProfileDetailRow(label = "Tipo de Conta", value = "Utilizador Standard")
                 Spacer(modifier = Modifier.height(8.dp))
@@ -252,7 +274,7 @@ fun PerfilScreen(
         if (showEditProfileDialog) {
             var firstName by remember { mutableStateOf(tokenManager.getUserName().split(" ").firstOrNull() ?: "") }
             var lastNameDialog by remember { mutableStateOf(tokenManager.getUserName().split(" ").asSequence().drop(1).joinToString(" ")) }
-            var bio by remember { mutableStateOf("") }
+            var bio by remember { mutableStateOf(userBio) }
             AlertDialog(
                 onDismissRequest = { showEditProfileDialog = false },
                 title = { Text("Editar Perfil", color = Color.White) },
@@ -273,11 +295,15 @@ fun PerfilScreen(
                                 val response = api.updateUserProfile(ProfileUpdateRequest(firstName, lastNameDialog, bio))
                                 if (response.isSuccessful && response.body() != null) {
                                     val body = response.body()!!
-                                    tokenManager.saveUser(body.name ?: "", body.email ?: "", bio)
+                                    val fullName = body.name ?: "$firstName $lastNameDialog".trim()
+                                    tokenManager.saveUser(fullName, body.email ?: tokenManager.getUserEmail(), bio)
                                     userBio = bio
                                     Toast.makeText(context, "Perfil atualizado", Toast.LENGTH_SHORT).show()
                                 } else {
-                                    Toast.makeText(context, "Erro ao atualizar perfil", Toast.LENGTH_LONG).show()
+                                    val fullName = "$firstName $lastNameDialog".trim()
+                                    tokenManager.saveUser(fullName, tokenManager.getUserEmail(), bio)
+                                    userBio = bio
+                                    Toast.makeText(context, "Perfil atualizado localmente", Toast.LENGTH_SHORT).show()
                                 }
                             } catch (e: Exception) {
                                 e.printStackTrace()

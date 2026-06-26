@@ -1,5 +1,10 @@
 package com.example.ui
 
+import android.content.Context
+import android.content.Intent
+import android.graphics.Paint
+import android.graphics.pdf.PdfDocument
+import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -19,11 +24,16 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.FileProvider
 import com.example.model.Expense
+import com.example.utils.TokenManager
+import java.io.File
+import java.io.FileOutputStream
 import java.text.NumberFormat
 import java.util.Locale
 
@@ -32,6 +42,9 @@ data class ChartPoint(val label: String, val income: Double, val expense: Double
 
 @Composable
 fun RelatoriosScreen(allIncomes: List<Expense>, allExpenses: List<Expense>) {
+    val context = LocalContext.current
+    val tokenManager = remember { TokenManager(context) }
+    
     val currencyFormat = NumberFormat.getCurrencyInstance(Locale("pt", "PT")).apply {
         currency = java.util.Currency.getInstance("EUR")
     }
@@ -42,10 +55,12 @@ fun RelatoriosScreen(allIncomes: List<Expense>, allExpenses: List<Expense>) {
     var selectedPeriod by remember { mutableStateOf("6 Meses") }
     val periods = listOf("1 Semana", "1 Mês", "3 Meses", "6 Meses", "1 Ano")
 
-    val today = try {
-        java.time.LocalDate.now()
-    } catch (_: Exception) {
-        java.time.LocalDate.of(2026, 6, 8)
+    val today = remember {
+        try {
+            java.time.LocalDate.now()
+        } catch (_: Exception) {
+            java.time.LocalDate.of(2026, 6, 8)
+        }
     }
 
     val parseLocalDate = { dateStr: String ->
@@ -105,8 +120,8 @@ fun RelatoriosScreen(allIncomes: List<Expense>, allExpenses: List<Expense>) {
     val salarioPct = pcts[5]
     val outrosPct = pcts[6]
 
-    val maxPct = pcts.maxOrNull() ?: 0f
-    val maxPctStr = if (totalDistSum > 0) "${(maxPct * 100).toInt()}%" else "0%"
+    val maxPctValue = pcts.maxOrNull() ?: 0f
+    val minPctValue = pcts.filter { it > 0 }.minOrNull() ?: 0f
 
     val moradiaStr = currencyFormat.format(moradiaAmt)
     val alimentacaoStr = currencyFormat.format(alimentacaoAmt)
@@ -243,7 +258,22 @@ fun RelatoriosScreen(allIncomes: List<Expense>, allExpenses: List<Expense>) {
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 OutlinedButton(
-                    onClick = {},
+                    onClick = {
+                        generateAndSharePDF(
+                            context,
+                            tokenManager.getUserName(),
+                            tokenManager.getUserEmail(),
+                            totalIncomes,
+                            totalExpenses,
+                            moradiaStr,
+                            alimentacaoStr,
+                            transporteStr,
+                            lazerStr,
+                            saudeStr,
+                            salarioStr,
+                            outrosStr
+                        )
+                    },
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF00E676)),
                     border = BorderStroke(1.dp, Color(0xFF00E676)),
                     modifier = Modifier.weight(1f)
@@ -254,7 +284,20 @@ fun RelatoriosScreen(allIncomes: List<Expense>, allExpenses: List<Expense>) {
                 }
 
                 OutlinedButton(
-                    onClick = {},
+                    onClick = {
+                        generateAndShareExcel(
+                            context,
+                            totalIncomes,
+                            totalExpenses,
+                            moradiaStr,
+                            alimentacaoStr,
+                            transporteStr,
+                            lazerStr,
+                            saudeStr,
+                            salarioStr,
+                            outrosStr
+                        )
+                    },
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF00E676)),
                     border = BorderStroke(1.dp, Color(0xFF00E676)),
                     modifier = Modifier.weight(1f)
@@ -456,7 +499,7 @@ fun RelatoriosScreen(allIncomes: List<Expense>, allExpenses: List<Expense>) {
                             }
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text("MAIOR", color = Color.Gray, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                                Text(maxPctStr, color = Color(0xFF00E676), fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                                Text("${(maxPctValue * 100).toInt()}%", color = Color(0xFF00E676), fontSize = 18.sp, fontWeight = FontWeight.Bold)
                             }
                         }
 
@@ -464,13 +507,13 @@ fun RelatoriosScreen(allIncomes: List<Expense>, allExpenses: List<Expense>) {
                             verticalArrangement = Arrangement.spacedBy(6.dp),
                             modifier = Modifier.padding(start = 16.dp)
                         ) {
-                            CategoryLegendRow("Moradia", moradiaStr, Color(0xFF00E676))
-                            CategoryLegendRow("Alimentação", alimentacaoStr, Color(0xFF45FEC9))
-                            CategoryLegendRow("Transporte", transporteStr, Color(0xFFFFDEC4))
-                            CategoryLegendRow("Lazer", lazerStr, Color(0xFFFFB1C1))
-                            CategoryLegendRow("Saúde", saudeStr, Color(0xFF90CAF9))
-                            CategoryLegendRow("Salário", salarioStr, Color(0xFFFFEB3B))
-                            CategoryLegendRow("Outros", outrosStr, Color.LightGray)
+                            CategoryLegendRow("Moradia", moradiaStr, moradiaPct, Color(0xFF00E676), maxPctValue, minPctValue)
+                            CategoryLegendRow("Alimentação", alimentacaoStr, alimentacaoPct, Color(0xFF45FEC9), maxPctValue, minPctValue)
+                            CategoryLegendRow("Transporte", transporteStr, transportePct, Color(0xFFFFDEC4), maxPctValue, minPctValue)
+                            CategoryLegendRow("Lazer", lazerStr, lazerPct, Color(0xFFFFB1C1), maxPctValue, minPctValue)
+                            CategoryLegendRow("Saúde", saudeStr, saudePct, Color(0xFF90CAF9), maxPctValue, minPctValue)
+                            CategoryLegendRow("Salário", salarioStr, salarioPct, Color(0xFFFFEB3B), maxPctValue, minPctValue)
+                            CategoryLegendRow("Outros", outrosStr, outrosPct, Color.LightGray, maxPctValue, minPctValue)
                         }
                     }
                 }
@@ -480,7 +523,17 @@ fun RelatoriosScreen(allIncomes: List<Expense>, allExpenses: List<Expense>) {
 }
 
 @Composable
-fun CategoryLegendRow(name: String, amount: String, color: Color) {
+fun CategoryLegendRow(
+    name: String, 
+    amount: String, 
+    pct: Float, 
+    color: Color, 
+    maxPct: Float, 
+    minPct: Float
+) {
+    val isMax = pct > 0f && pct == maxPct
+    val isMin = pct > 0f && pct == minPct
+    
     Row(
         modifier = Modifier.fillMaxWidth(0.9f),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -488,8 +541,161 @@ fun CategoryLegendRow(name: String, amount: String, color: Color) {
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             Box(modifier = Modifier.size(8.dp).background(color, CircleShape))
-            Text(name, color = Color.LightGray, fontSize = 12.sp)
+            Text(name, color = Color.LightGray, fontSize = 11.sp)
+            if (isMax) {
+                Text("(MAIOR)", color = Color(0xFF00E676), fontSize = 9.sp, fontWeight = FontWeight.ExtraBold)
+            }
+            if (isMin) {
+                Text("(MENOR)", color = Color(0xFFFFB4AB), fontSize = 9.sp, fontWeight = FontWeight.ExtraBold)
+            }
         }
-        Text(amount, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("${(pct * 100).toInt()}%", color = Color.Gray, fontSize = 11.sp)
+            Text(amount, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
+private fun generateAndSharePDF(
+    context: Context,
+    userName: String,
+    userEmail: String,
+    incomes: Double,
+    expenses: Double,
+    moradia: String,
+    alimentacao: String,
+    transporte: String,
+    lazer: String,
+    saude: String,
+    salario: String,
+    outros: String
+) {
+    val pdfDocument = PdfDocument()
+    val pageInfo = PdfDocument.PageInfo.Builder(595, 842, 1).create() // A4 Size
+    val page = pdfDocument.startPage(pageInfo)
+    val canvas = page.canvas
+    val paint = Paint()
+
+    // Header / Logo
+    paint.color = android.graphics.Color.parseColor("#00FF66")
+    paint.isFakeBoldText = true
+    paint.textSize = 40f
+    canvas.drawText("$", 50f, 60f, paint)
+
+    paint.color = android.graphics.Color.BLACK
+    paint.textSize = 28f
+    canvas.drawText("FinFlow Financial Report", 100f, 55f, paint)
+
+    paint.textSize = 14f
+    paint.isFakeBoldText = false
+    canvas.drawText("Utilizador: $userName", 50f, 100f, paint)
+    canvas.drawText("Email: $userEmail", 50f, 120f, paint)
+    canvas.drawText("Data de Emissão: ${java.time.LocalDate.now()}", 50f, 140f, paint)
+
+    paint.strokeWidth = 2f
+    canvas.drawLine(50f, 155f, 545f, 155f, paint)
+
+    paint.isFakeBoldText = true
+    paint.textSize = 18f
+    canvas.drawText("RESUMO FINANCEIRO", 50f, 190f, paint)
+    
+    paint.textSize = 14f
+    paint.isFakeBoldText = false
+    canvas.drawText("Total Entradas:", 50f, 220f, paint)
+    canvas.drawText("${incomes} €", 200f, 220f, paint)
+    
+    canvas.drawText("Total Saídas:", 50f, 240f, paint)
+    canvas.drawText("${expenses} €", 200f, 240f, paint)
+    
+    paint.isFakeBoldText = true
+    canvas.drawText("Saldo Líquido:", 50f, 260f, paint)
+    canvas.drawText("${incomes - expenses} €", 200f, 260f, paint)
+
+    paint.strokeWidth = 1f
+    canvas.drawLine(50f, 280f, 545f, 280f, paint)
+
+    paint.isFakeBoldText = true
+    paint.textSize = 18f
+    canvas.drawText("DISTRIBUIÇÃO POR CATEGORIA", 50f, 310f, paint)
+    
+    paint.textSize = 14f
+    paint.isFakeBoldText = false
+    val startY = 340f
+    val spacing = 25f
+    canvas.drawText("• Moradia:", 50f, startY, paint); canvas.drawText(moradia, 200f, startY, paint)
+    canvas.drawText("• Alimentação:", 50f, startY + spacing, paint); canvas.drawText(alimentacao, 200f, startY + spacing, paint)
+    canvas.drawText("• Transporte:", 50f, startY + 2 * spacing, paint); canvas.drawText(transporte, 200f, startY + 2 * spacing, paint)
+    canvas.drawText("• Lazer:", 50f, startY + 3 * spacing, paint); canvas.drawText(lazer, 200f, startY + 3 * spacing, paint)
+    canvas.drawText("• Saúde:", 50f, startY + 4 * spacing, paint); canvas.drawText(saude, 200f, startY + 4 * spacing, paint)
+    canvas.drawText("• Salário:", 50f, startY + 5 * spacing, paint); canvas.drawText(salario, 200f, startY + 5 * spacing, paint)
+    canvas.drawText("• Outros:", 50f, startY + 6 * spacing, paint); canvas.drawText(outros, 200f, startY + 6 * spacing, paint)
+
+    paint.textSize = 10f
+    paint.color = android.graphics.Color.GRAY
+    canvas.drawText("Gerado automaticamente pela App FinFlow Mobile", 50f, 800f, paint)
+
+    pdfDocument.finishPage(page)
+
+    val file = File(context.cacheDir, "Relatorio_FinFlow.pdf")
+    try {
+        pdfDocument.writeTo(FileOutputStream(file))
+        shareFile(context, file, "application/pdf")
+    } catch (e: Exception) {
+        Toast.makeText(context, "Erro ao gerar PDF", Toast.LENGTH_SHORT).show()
+    } finally {
+        pdfDocument.close()
+    }
+}
+
+private fun generateAndShareExcel(
+    context: Context,
+    incomes: Double,
+    expenses: Double,
+    moradia: String,
+    alimentacao: String,
+    transporte: String,
+    lazer: String,
+    saude: String,
+    salario: String,
+    outros: String
+) {
+    // Gerar um CSV (compatível com Excel)
+    val csvContent = StringBuilder()
+    csvContent.append("Categoria;Valor\n")
+    csvContent.append("Total Entradas;${incomes}\n")
+    csvContent.append("Total Saidas;${expenses}\n")
+    csvContent.append("Saldo Liquido;${incomes - expenses}\n")
+    csvContent.append("\n")
+    csvContent.append("DETALHE POR CATEGORIA\n")
+    csvContent.append("Moradia;${moradia}\n")
+    csvContent.append("Alimentacao;${alimentacao}\n")
+    csvContent.append("Transporte;${transporte}\n")
+    csvContent.append("Lazer;${lazer}\n")
+    csvContent.append("Saude;${saude}\n")
+    csvContent.append("Salario;${salario}\n")
+    csvContent.append("Outros;${outros}\n")
+
+    val file = File(context.cacheDir, "Relatorio_FinFlow.csv")
+    try {
+        FileOutputStream(file).use { it.write(csvContent.toString().toByteArray()) }
+        shareFile(context, file, "text/csv")
+    } catch (e: Exception) {
+        Toast.makeText(context, "Erro ao gerar Excel/CSV", Toast.LENGTH_SHORT).show()
+    }
+}
+
+private fun shareFile(context: Context, file: File, mimeType: String) {
+    try {
+        val authority = "${context.packageName}.fileprovider"
+        val uri = FileProvider.getUriForFile(context, authority, file)
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = mimeType
+            putExtra(Intent.EXTRA_STREAM, uri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        context.startActivity(Intent.createChooser(intent, "Enviar Relatório"))
+    } catch (e: Exception) {
+        e.printStackTrace()
+        Toast.makeText(context, "Erro ao partilhar ficheiro: ${e.message}", Toast.LENGTH_LONG).show()
     }
 }

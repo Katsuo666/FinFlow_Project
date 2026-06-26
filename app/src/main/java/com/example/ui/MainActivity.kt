@@ -9,6 +9,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.foundation.Image
 import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -142,10 +144,13 @@ fun MainScreenContainer(
             totalExpenses = expenses.sumOf { it.amount }
             balance = totalIncomes - totalExpenses
 
-            // Combinar e ordenar transações recentes
+            // Combinar e ordenar transações recentes (ID decrescente para as mais novas primeiro se as datas forem iguais)
             val combined = (incomes.map { it.copy(isIncome = true) } + 
                            expenses.map { it.copy(isIncome = false) })
-                .sortedByDescending { it.date }
+                .sortedWith(
+                    compareByDescending<Expense> { it.date }
+                    .thenByDescending { it.id ?: 0 }
+                )
             rawRecentTransactions = combined.take(6)
 
             // Carregar metas
@@ -205,7 +210,8 @@ fun MainScreenContainer(
                 )
                 "despesas" -> ExpenseListContent()
                 "metas" -> MetasScreen(
-                    goals = goalsList
+                    goals = goalsList,
+                    onGoalUpdated = { coroutineScope.launch { fetchAllData() } }
                 )
                 "relatorios" -> RelatoriosScreen(
                     allIncomes = allIncomesList,
@@ -250,7 +256,8 @@ fun MainScreenContainer(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun MainTopBar(tokenManager: TokenManager, onProfileClick: () -> Unit, refreshKey: Int) {
-    val profilePicUri = remember(refreshKey) { tokenManager.getProfilePicture() }
+    // Carregar o Bitmap nativo diretamente para evitar falhas do Coil
+    val profileBitmap = remember(refreshKey) { tokenManager.getProfileBitmap() }
     
     TopAppBar(
         title = {
@@ -265,9 +272,9 @@ private fun MainTopBar(tokenManager: TokenManager, onProfileClick: () -> Unit, r
                         .clickable { onProfileClick() },
                     contentAlignment = Alignment.Center
                 ) {
-                    if (profilePicUri != null) {
-                        coil.compose.AsyncImage(
-                            model = profilePicUri,
+                    if (profileBitmap != null) {
+                        Image(
+                            bitmap = profileBitmap.asImageBitmap(),
                             contentDescription = "Foto de Perfil",
                             modifier = Modifier
                                 .fillMaxSize()

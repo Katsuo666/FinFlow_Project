@@ -1,10 +1,13 @@
 package com.example.ui
 
 import androidx.compose.foundation.background
+import android.widget.Toast
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -12,19 +15,29 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.api.RetrofitClient
 import com.example.model.Goal
+import kotlinx.coroutines.launch
 import java.text.NumberFormat
 import java.util.Locale
 
 // ---------------- ECRÃ DO SEPARADOR METAS ----------------
 @Composable
-fun MetasScreen(goals: List<Goal>) {
+fun MetasScreen(goals: List<Goal>, onGoalUpdated: () -> Unit = {}) {
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
     val currencyFormat = NumberFormat.getCurrencyInstance(Locale("pt", "PT")).apply {
         currency = java.util.Currency.getInstance("EUR")
     }
+
+    var goalToEdit by remember { mutableStateOf<Goal?>(null) }
+    var newCurrentAmount by remember { mutableStateOf("") }
+    var isUpdating by remember { mutableStateOf(false) }
 
     val totalCurrent = goals.sumOf { it.currentAmount }
     val totalTarget = goals.sumOf { it.targetAmount }
@@ -134,7 +147,12 @@ fun MetasScreen(goals: List<Goal>) {
         } else {
             items(goals) { goal ->
                 Card(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            goalToEdit = goal
+                            newCurrentAmount = goal.currentAmount.toString()
+                        },
                     colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E)),
                     shape = RoundedCornerShape(16.dp)
                 ) {
@@ -206,5 +224,69 @@ fun MetasScreen(goals: List<Goal>) {
                 }
             }
         }
+    }
+
+    // Diálogo para editar progresso da meta
+    if (goalToEdit != null) {
+        AlertDialog(
+            onDismissRequest = { if (!isUpdating) goalToEdit = null },
+            title = { Text("Atualizar Progresso", color = Color.White) },
+            text = {
+                Column {
+                    Text("Meta: ${goalToEdit?.name}", color = Color.Gray, fontSize = 14.sp)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    OutlinedTextField(
+                        value = newCurrentAmount,
+                        onValueChange = { newCurrentAmount = it },
+                        label = { Text("Valor Guardado") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White,
+                            cursorColor = MaterialTheme.colorScheme.primary
+                        )
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val amt = newCurrentAmount.toDoubleOrNull() ?: 0.0
+                        if (goalToEdit != null) {
+                            isUpdating = true
+                            coroutineScope.launch {
+                                try {
+                                    val api = RetrofitClient.getApiService(context)
+                                    val updatedGoal = goalToEdit!!.copy(currentAmount = amt)
+                                    val response = api.updateGoal(updatedGoal.id!!, updatedGoal)
+                                    if (response.isSuccessful) {
+                                        Toast.makeText(context, "Meta atualizada!", Toast.LENGTH_SHORT).show()
+                                        onGoalUpdated()
+                                        goalToEdit = null
+                                    } else {
+                                        Toast.makeText(context, "Erro ao atualizar meta", Toast.LENGTH_SHORT).show()
+                                    }
+                                } catch (e: Exception) {
+                                    Toast.makeText(context, "Erro de rede", Toast.LENGTH_SHORT).show()
+                                } finally {
+                                    isUpdating = false
+                                }
+                            }
+                        }
+                    },
+                    enabled = !isUpdating
+                ) {
+                    if (isUpdating) CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                    else Text("Salvar")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { goalToEdit = null }, enabled = !isUpdating) {
+                    Text("Cancelar", color = Color.Gray)
+                }
+            },
+            containerColor = Color(0xFF1E1E1E)
+        )
     }
 }

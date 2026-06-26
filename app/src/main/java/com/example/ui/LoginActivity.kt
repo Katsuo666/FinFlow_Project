@@ -34,6 +34,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.lifecycleScope
 import com.example.api.RetrofitClient
 import com.example.model.LoginRequest
 import com.example.ui.theme.MyApplicationTheme
@@ -69,10 +70,28 @@ class LoginActivity : ComponentActivity() {
                     ) {
                         LoginScreenContent { token, name, email ->
                             tokenManager.saveToken(token)
-                            tokenManager.saveUser(name, email)
-                            Toast.makeText(this@LoginActivity, "Bem-vindo!", Toast.LENGTH_SHORT).show()
-                            startActivity(Intent(this@LoginActivity, MainActivity::class.java))
-                            finish()
+                            
+                            // Usar lifecycleScope para buscar o perfil completo ANTES de entrar
+                            // Isto garante que a Bio e outros dados são carregados do servidor no login
+                            lifecycleScope.launch {
+                                try {
+                                    val api = RetrofitClient.getApiService(this@LoginActivity)
+                                    val profileRes = api.getUserProfile()
+                                    if (profileRes.isSuccessful && profileRes.body() != null) {
+                                        val p = profileRes.body()!!
+                                        // Guardar todos os campos, incluindo a Bio vinda do servidor
+                                        tokenManager.saveUser(p.name ?: name, p.email ?: email, p.bio)
+                                    } else {
+                                        tokenManager.saveUser(name, email)
+                                    }
+                                } catch (e: Exception) {
+                                    tokenManager.saveUser(name, email)
+                                } finally {
+                                    Toast.makeText(this@LoginActivity, "Bem-vindo!", Toast.LENGTH_SHORT).show()
+                                    startActivity(Intent(this@LoginActivity, MainActivity::class.java))
+                                    finish()
+                                }
+                            }
                         }
                     }
                 }
@@ -94,7 +113,6 @@ fun FinFlowInputField(
     Column(
         modifier = Modifier.fillMaxWidth()
     ) {
-        // Rótulo limpo e de alto contraste acima/fora do campo de texto
         Text(
             text = labelText,
             color = Color.White,
@@ -103,7 +121,6 @@ fun FinFlowInputField(
             modifier = Modifier.padding(bottom = 6.dp)
         )
 
-        // Contentor retangular branco sólido com texto escuro
         OutlinedTextField(
             value = value,
             onValueChange = onValueChange,
@@ -118,8 +135,8 @@ fun FinFlowInputField(
                 unfocusedTextColor = Color.Black,
                 focusedContainerColor = Color.White,
                 unfocusedContainerColor = Color.White,
-                focusedBorderColor = Color(0xFF00FF66), // cor de foco verde néon
-                unfocusedBorderColor = Color.Transparent, // contorno transparente quando sem foco
+                focusedBorderColor = Color(0xFF00FF66),
+                unfocusedBorderColor = Color.Transparent,
                 cursorColor = Color.Black
             ),
             shape = RoundedCornerShape(12.dp),
@@ -152,7 +169,6 @@ fun LoginScreenContent(onAuthSuccess: (String, String?, String?) -> Unit) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // Emblema/Ícone da Aplicação
             Box(
                 modifier = Modifier
                     .size(68.dp)
@@ -199,12 +215,11 @@ fun LoginScreenContent(onAuthSuccess: (String, String?, String?) -> Unit) {
 
             Spacer(modifier = Modifier.height(28.dp))
 
-            // Campos de Login
             FinFlowInputField(
                 value = email,
                 onValueChange = { email = it },
                 labelText = "Digite seu e-mail *",
-                placeholderText = "exemplo@email.com",
+                placeholderText = "seu@email.com",
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email)
             )
 

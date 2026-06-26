@@ -382,27 +382,16 @@ fun AddExpenseScreenContent(onSuccess: () -> Unit, onCancel: () -> Unit) {
                 coroutineScope.launch {
                     try {
                         val api = RetrofitClient.getApiService(context)
-                        val payloadItem = if (isUsingLocalFallbackCategories) {
-                            Expense(
-                                id = null,
-                                description = description,
-                                amount = amtValue,
-                                date = apiDate,
-                                categoryId = null,
-                                categoryName = selectedCategory?.name,
-                                category = null
-                            )
-                        } else {
-                            Expense(
-                                id = null,
-                                description = description,
-                                amount = amtValue,
-                                date = apiDate,
-                                categoryId = selectedCategory?.id,
-                                categoryName = selectedCategory?.name,
-                                category = selectedCategory
-                            )
-                        }
+                        val payloadItem = Expense(
+                            id = null,
+                            description = description,
+                            amount = amtValue,
+                            date = apiDate,
+                            // Se estivermos a usar categorias locais, enviamos ID nulo para evitar erro no servidor
+                            categoryId = if (isUsingLocalFallbackCategories) null else selectedCategory?.id,
+                            categoryName = selectedCategory?.displayName,
+                            category = if (isUsingLocalFallbackCategories) null else selectedCategory
+                        )
 
                         val response = if (isIncome) {
                             api.createIncome(payloadItem)
