@@ -321,7 +321,8 @@ fun LoginScreenContent(onAuthSuccess: (String, String?, String?) -> Unit) {
                 fontWeight = FontWeight.Normal,
                 modifier = Modifier
                     .clickable {
-                        Toast.makeText(context, "Mecanismo de recuperação em desenvolvimento.", Toast.LENGTH_SHORT).show()
+                        val intent = Intent(context, PasswordRecoveryActivity::class.java)
+                        context.startActivity(intent)
                     }
                     .padding(vertical = 4.dp)
             )

@@ -100,7 +100,7 @@ fun AddExpenseScreenContent(onSuccess: () -> Unit, onCancel: () -> Unit) {
         isLoadingCategories = true
         hasCategoryLoadError = false
         val defaultCategories = listOf(
-            Category(1, "Vencimento"),
+            Category(1, "Salário"),
             Category(2, "Moradia"),
             Category(3, "Alimentação"),
             Category(4, "Transporte"),
@@ -387,10 +387,11 @@ fun AddExpenseScreenContent(onSuccess: () -> Unit, onCancel: () -> Unit) {
 
                         // Se estamos a usar categorias locais de fallback, não confie no ID local.
                         // Em vez disso, criamos/obtemos a categoria no servidor pelo seu nome.
-                        val resolvedCategoryId = if (!isUsingLocalFallbackCategories && selectedCategory?.id != null) {
-                            selectedCategory.id
+                        val currentCategory = selectedCategory
+                        val resolvedCategoryId = if (!isUsingLocalFallbackCategories && currentCategory?.id != null) {
+                            currentCategory.id
                         } else {
-                            val categoryName = selectedCategory?.name ?: selectedCategory?.displayName ?: "Outros"
+                            val categoryName = currentCategory?.name ?: currentCategory?.displayName ?: "Outros"
                             val categoryResponse = api.createCategory(CategoryRequest(categoryName))
                             if (categoryResponse.isSuccessful && categoryResponse.body() != null) {
                                 categoryResponse.body()!!.id
@@ -405,7 +406,7 @@ fun AddExpenseScreenContent(onSuccess: () -> Unit, onCancel: () -> Unit) {
                             amount = amtValue,
                             date = apiDate,
                             categoryId = resolvedCategoryId,
-                            categoryName = selectedCategory?.displayName,
+                            categoryName = currentCategory?.displayName,
                             category = null // Enviar null para evitar erro de desserialização no servidor
                         )
 

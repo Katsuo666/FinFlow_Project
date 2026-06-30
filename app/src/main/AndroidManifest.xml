@@ -34,6 +34,18 @@
         </activity>
 
         <activity
+            android:name=".ui.PasswordRecoveryActivity"
+            android:exported="true"
+            android:theme="@style/Theme.MyApplication">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="finflow" android:host="reset-password" />
+            </intent-filter>
+        </activity>
+
+        <activity
             android:name=".ui.RegisterActivity"
             android:exported="true"
             android:label="Criar Conta"

@@ -21,6 +21,12 @@ interface ApiService {
     @POST("api/auth/login")
     suspend fun login(@Body request: LoginRequest): Response<AuthResponse>
 
+    @POST("api/auth/forgot-password")
+    suspend fun forgotPassword(@Body request: ForgotPasswordRequest): Response<Map<String, Any>>
+
+    @POST("api/auth/reset-password")
+    suspend fun resetPassword(@Body request: ResetPasswordRequest): Response<Map<String, Any>>
+
     // Incomes
     @GET("api/incomes")
     suspend fun getIncomes(): Response<List<Expense>>
