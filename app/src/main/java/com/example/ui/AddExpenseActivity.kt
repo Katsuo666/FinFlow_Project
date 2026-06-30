@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.api.RetrofitClient
 import com.example.model.Category
+import com.example.model.CategoryRequest
 import com.example.model.Expense
 import com.example.ui.theme.MyApplicationTheme
 import com.example.utils.TokenManager
@@ -382,13 +383,28 @@ fun AddExpenseScreenContent(onSuccess: () -> Unit, onCancel: () -> Unit) {
                 isSaving = true
                 coroutineScope.launch {
                     try {
-                        val api = RetrofitClient.getApiService(context)
+                            val api = RetrofitClient.getApiService(context)
+
+                        // Se estamos a usar categorias locais de fallback, não confie no ID local.
+                        // Em vez disso, criamos/obtemos a categoria no servidor pelo seu nome.
+                        val resolvedCategoryId = if (!isUsingLocalFallbackCategories && selectedCategory?.id != null) {
+                            selectedCategory.id
+                        } else {
+                            val categoryName = selectedCategory?.name ?: selectedCategory?.displayName ?: "Outros"
+                            val categoryResponse = api.createCategory(CategoryRequest(categoryName))
+                            if (categoryResponse.isSuccessful && categoryResponse.body() != null) {
+                                categoryResponse.body()!!.id
+                            } else {
+                                throw IllegalStateException("Não foi possível criar a categoria no servidor")
+                            }
+                        }
+
                         val payloadItem = Expense(
                             id = null,
                             description = description,
                             amount = amtValue,
                             date = apiDate,
-                            categoryId = selectedCategory?.id,
+                            categoryId = resolvedCategoryId,
                             categoryName = selectedCategory?.displayName,
                             category = null // Enviar null para evitar erro de desserialização no servidor
                         )

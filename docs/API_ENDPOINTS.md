@@ -158,5 +158,3 @@
 - Datas no formato errado (não usar `dd/MM/yyyy` nem `MM/yyyy`)
 
 ---
-
-> Se quiseres, também posso gerar um `OpenAPI` (Swagger) básico a partir desta tabela ou adicionar exemplos cURL para os endpoints mais usados.
