@@ -29,7 +29,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.scale
 import com.example.api.RetrofitClient
-import com.example.model.CategoryRequest
 import com.example.model.PasswordUpdateRequest
 import com.example.model.ProfileUpdateRequest
 import com.example.utils.TokenManager
@@ -52,7 +51,6 @@ fun PerfilScreen(
     var isDeleting by remember { mutableStateOf(value = false) }
     var showEditProfileDialog by remember { mutableStateOf(value = false) }
     var showChangePasswordDialog by remember { mutableStateOf(value = false) }
-    var showCreateCategoryDialog by remember { mutableStateOf(value = false) }
 
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
@@ -356,42 +354,6 @@ fun PerfilScreen(
                     }) { Text("Salvar") }
                 },
                 dismissButton = { TextButton(onClick = { showChangePasswordDialog = false }) { Text("Cancelar") } },
-                containerColor = Color(0xFF1E1E1E)
-            )
-        }
-
-        // Dialog para criar categoria
-        if (showCreateCategoryDialog) {
-            var categoryName by remember { mutableStateOf("") }
-            AlertDialog(
-                onDismissRequest = { showCreateCategoryDialog = false },
-                title = { Text("Criar Categoria", color = Color.White) },
-                text = {
-                    Column {
-                        OutlinedTextField(value = categoryName, onValueChange = { categoryName = it }, label = { Text("Nome da Categoria") })
-                    }
-                },
-                confirmButton = {
-                    Button(onClick = {
-                        coroutineScope.launch {
-                            try {
-                                val api = RetrofitClient.getApiService(context)
-                                val response = api.createCategory(CategoryRequest(categoryName))
-                                if (response.isSuccessful) {
-                                    Toast.makeText(context, "Categoria criada", Toast.LENGTH_SHORT).show()
-                                } else {
-                                    Toast.makeText(context, "Erro ao criar categoria", Toast.LENGTH_LONG).show()
-                                }
-                            } catch (e: Exception) {
-                                e.printStackTrace()
-                                Toast.makeText(context, "Erro de rede: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
-                            } finally {
-                                showCreateCategoryDialog = false
-                            }
-                        }
-                    }) { Text("Criar") }
-                },
-                dismissButton = { TextButton(onClick = { showCreateCategoryDialog = false }) { Text("Cancelar") } },
                 containerColor = Color(0xFF1E1E1E)
             )
         }

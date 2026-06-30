@@ -79,33 +79,31 @@ fun RelatoriosScreen(allIncomes: List<Expense>, allExpenses: List<Expense>) {
         if (maxTxDate != null && maxTxDate.isAfter(now)) maxTxDate else now
     }
 
-    // Lógica de agrupamento simplificada usando a inteligência do modelo Expense
+    // Lógica de agrupamento robusta que coincide com o modelo Expense
     val groupedData = remember(allExpenses, allIncomes) {
         val map = mutableMapOf<String, Double>()
         
-        allExpenses.forEach { tx ->
-            val cat = tx.displayCategoryName
-            map[cat] = map.getOrDefault(cat, 0.0) + tx.amount
-        }
-        
-        allIncomes.forEach { tx ->
-            val cat = tx.displayCategoryName
-            if (cat.contains("Salário") || cat.contains("Vencimento")) {
-                map["Salário"] = map.getOrDefault("Salário", 0.0) + tx.amount
+        (allExpenses + allIncomes).forEach { tx ->
+            val catName = tx.displayCategoryName.lowercase()
+            val targetKey = when {
+                catName.contains("salário") || catName.contains("vencimento") || catName.contains("venda") -> "Salário"
+                catName.contains("moradia") || catName.contains("renda") || catName.contains("luz") || catName.contains("água") || catName.contains("internet") -> "Moradia"
+                catName.contains("alimentação") || catName.contains("restaurante") || catName.contains("mercado") || catName.contains("comida") || catName.contains("óleo") || catName.contains("batata") -> "Alimentação"
+                catName.contains("transporte") || catName.contains("carro") || catName.contains("uber") || catName.contains("gasolina") -> "Transporte"
+                catName.contains("lazer") || catName.contains("viagem") || catName.contains("diversão") -> "Lazer"
+                catName.contains("saúde") || catName.contains("saude") -> "Saúde"
+                else -> "Outros"
             }
+            map[targetKey] = map.getOrDefault(targetKey, 0.0) + tx.amount
         }
         map
     }
 
-    val moradiaAmt = groupedData.entries.asSequence()
-        .filter { it.key.contains("Moradia") }
-        .sumOf { it.value }
+    val moradiaAmt = groupedData.getOrDefault("Moradia", 0.0)
     val alimentacaoAmt = groupedData.getOrDefault("Alimentação", 0.0)
     val transporteAmt = groupedData.getOrDefault("Transporte", 0.0)
     val lazerAmt = groupedData.getOrDefault("Lazer", 0.0)
-    val saudeAmt = groupedData.entries.asSequence()
-        .filter { it.key.lowercase().contains("saúde") || it.key.lowercase().contains("saude") }
-        .sumOf { it.value }
+    val saudeAmt = groupedData.getOrDefault("Saúde", 0.0)
     val salarioAmt = groupedData.getOrDefault("Salário", 0.0)
     val outrosAmt = groupedData.getOrDefault("Outros", 0.0)
 

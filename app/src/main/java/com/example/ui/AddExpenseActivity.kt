@@ -388,10 +388,9 @@ fun AddExpenseScreenContent(onSuccess: () -> Unit, onCancel: () -> Unit) {
                             description = description,
                             amount = amtValue,
                             date = apiDate,
-                            // Se estivermos a usar categorias locais, enviamos ID nulo para evitar erro no servidor
-                            categoryId = if (isUsingLocalFallbackCategories) null else selectedCategory?.id,
+                            categoryId = selectedCategory?.id,
                             categoryName = selectedCategory?.displayName,
-                            category = if (isUsingLocalFallbackCategories) null else selectedCategory
+                            category = null // Enviar null para evitar erro de desserialização no servidor
                         )
 
                         val response = if (isIncome) {

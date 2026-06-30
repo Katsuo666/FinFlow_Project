@@ -12,7 +12,7 @@ data class Expense(
 ) {
     val displayCategoryName: String
         get() {
-            // Prioridade 1: ID da Categoria (Mapeamento mais fiável)
+            // Prioridade 1: ID da Categoria (Mapeamento padrão fixo 1-6)
             val idMapping = when (categoryId) {
                 1 -> "Salário / Vencimento"
                 2 -> "Moradia (Renda/Luz/Água)"
@@ -24,16 +24,16 @@ data class Expense(
             }
             if (idMapping != null) return idMapping
 
-            // Prioridade 2: Nome da Categoria oficial do objeto
+            // Prioridade 2: Nome da Categoria oficial do objeto (Se vier do servidor/selecionado)
             val name = category?.displayName ?: categoryName
             if (name != null && name.isNotBlank() && name != "Geral" && name != "Outros") {
                 val cleanName = name.lowercase().trim()
                 return when {
-                    cleanName.contains("salário") || cleanName.contains("salario") || cleanName.contains("vencimento") || cleanName.contains("renda") -> "Salário / Vencimento"
-                    cleanName.contains("moradia") || cleanName.contains("aluguer") || cleanName.contains("luz") || cleanName.contains("água") || cleanName.contains("agua") || cleanName.contains("contas") -> "Moradia (Renda/Luz/Água)"
-                    cleanName.contains("alimentação") || cleanName.contains("alimenta") || cleanName.contains("restaurante") || cleanName.contains("supermercado") || cleanName.contains("comida") || cleanName.contains("mercado") -> "Alimentação"
-                    cleanName.contains("transporte") || cleanName.contains("carro") || cleanName.contains("gasolina") -> "Transporte"
-                    cleanName.contains("lazer") || cleanName.contains("viagem") || cleanName.contains("diversão") -> "Lazer"
+                    cleanName.contains("salário") || cleanName.contains("salario") || cleanName.contains("vencimento") || cleanName.contains("renda") || cleanName.contains("venda") || cleanName.contains("pagamento") -> "Salário / Vencimento"
+                    cleanName.contains("moradia") || cleanName.contains("aluguer") || cleanName.contains("luz") || cleanName.contains("água") || cleanName.contains("agua") || cleanName.contains("contas") || cleanName.contains("internet") -> "Moradia (Renda/Luz/Água)"
+                    cleanName.contains("alimentação") || cleanName.contains("alimenta") || cleanName.contains("restaurante") || cleanName.contains("supermercado") || cleanName.contains("comida") || cleanName.contains("mercado") || cleanName.contains("mercearia") || cleanName.contains("padaria") -> "Alimentação"
+                    cleanName.contains("transporte") || cleanName.contains("carro") || cleanName.contains("gasolina") || cleanName.contains("combustível") || cleanName.contains("uber") -> "Transporte"
+                    cleanName.contains("lazer") || cleanName.contains("viagem") || cleanName.contains("diversão") || cleanName.contains("cinema") -> "Lazer"
                     else -> name
                 }
             }
@@ -41,11 +41,11 @@ data class Expense(
             // Prioridade 3: Análise da Descrição (Apenas se a categoria for incerta)
             val descClean = description.lowercase().trim()
             return when {
-                descClean.contains("salário") || descClean.contains("vencimento") || descClean.contains("renda") -> "Salário / Vencimento"
-                descClean.contains("aluguer") || descClean.contains("contas") || descClean.contains("internet") -> "Moradia (Renda/Luz/Água)"
-                descClean.contains("mercado") || descClean.contains("jantar") || descClean.contains("almoço") || descClean.contains("comida") -> "Alimentação"
-                descClean.contains("gasolina") || descClean.contains("uber") || descClean.contains("autocarro") -> "Transporte"
-                descClean.contains("cinema") || descClean.contains("festa") || descClean.contains("viagem") || descClean.contains("fim de semana") -> "Lazer"
+                descClean.contains("salário") || descClean.contains("vencimento") || descClean.contains("renda") || descClean.contains("venda") || descClean.contains("recebido") -> "Salário / Vencimento"
+                descClean.contains("aluguer") || descClean.contains("contas") || descClean.contains("internet") || descClean.contains("condomínio") -> "Moradia (Renda/Luz/Água)"
+                descClean.contains("mercado") || descClean.contains("jantar") || descClean.contains("almoço") || descClean.contains("comida") || descClean.contains("pão") || descClean.contains("óleo") || descClean.contains("arroz") || descClean.contains("batata") -> "Alimentação"
+                descClean.contains("gasolina") || descClean.contains("uber") || descClean.contains("autocarro") || descClean.contains("combustível") -> "Transporte"
+                descClean.contains("cinema") || descClean.contains("festa") || descClean.contains("viagem") || descClean.contains("fim de semana") || descClean.contains("concerto") -> "Lazer"
                 else -> "Outros"
             }
         }
