@@ -1,6 +1,7 @@
 package com.example.ui
 
 import android.widget.Toast
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -42,8 +43,18 @@ fun MetasScreen(goals: List<Goal>, onGoalUpdated: () -> Unit = {}) {
     var goalToDelete by remember { mutableStateOf<Goal?>(null) }
     var isDeleting by remember { mutableStateOf(false) }
 
+    var selectedFilter by remember { mutableStateOf("Tudo") }
+
     val activeCount = goals.count { it.currentAmount < it.targetAmount }
     val completedCount = goals.count { it.currentAmount >= it.targetAmount }
+
+    val filteredGoals = remember(goals, selectedFilter) {
+        when (selectedFilter) {
+            "Ativas" -> goals.filter { it.currentAmount < it.targetAmount }
+            "Concluídas" -> goals.filter { it.currentAmount >= it.targetAmount }
+            else -> goals
+        }
+    }
 
     LazyColumn(
         modifier = Modifier
@@ -76,9 +87,14 @@ fun MetasScreen(goals: List<Goal>, onGoalUpdated: () -> Unit = {}) {
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Card(
-                    modifier = Modifier.weight(1f),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E)),
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable { selectedFilter = if (selectedFilter == "Ativas") "Tudo" else "Ativas" },
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (selectedFilter == "Ativas") Color(0xFF2C2C2C) else Color(0xFF1E1E1E)
+                    ),
                     shape = RoundedCornerShape(12.dp),
+                    border = if (selectedFilter == "Ativas") BorderStroke(1.dp, Color(0xFF00E676)) else null
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Icon(Icons.Default.Flag, contentDescription = "Ativas", tint = Color(0xFF00E676))
@@ -88,9 +104,14 @@ fun MetasScreen(goals: List<Goal>, onGoalUpdated: () -> Unit = {}) {
                     }
                 }
                 Card(
-                    modifier = Modifier.weight(1f),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E)),
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable { selectedFilter = if (selectedFilter == "Concluídas") "Tudo" else "Concluídas" },
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (selectedFilter == "Concluídas") Color(0xFF2C2C2C) else Color(0xFF1E1E1E)
+                    ),
                     shape = RoundedCornerShape(12.dp),
+                    border = if (selectedFilter == "Concluídas") BorderStroke(1.dp, Color(0xFF45FEC9)) else null
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Icon(Icons.Default.EmojiEvents, contentDescription = "Concluídas", tint = Color(0xFF45FEC9))
@@ -103,7 +124,7 @@ fun MetasScreen(goals: List<Goal>, onGoalUpdated: () -> Unit = {}) {
         }
 
         // Detalhes das metas
-        if (goals.isEmpty()) {
+        if (filteredGoals.isEmpty()) {
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -117,7 +138,7 @@ fun MetasScreen(goals: List<Goal>, onGoalUpdated: () -> Unit = {}) {
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "Nenhuma meta cadastrada",
+                            text = if (selectedFilter == "Tudo") "Nenhuma meta cadastrada" else "Nenhuma meta nesta categoria",
                             color = Color.Gray,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Medium
@@ -126,7 +147,7 @@ fun MetasScreen(goals: List<Goal>, onGoalUpdated: () -> Unit = {}) {
                 }
             }
         } else {
-            items(goals) { goal ->
+            items(filteredGoals) { goal ->
                 val isCompleted = goal.currentAmount >= goal.targetAmount
                 Card(
                     modifier = Modifier
@@ -247,6 +268,10 @@ fun MetasScreen(goals: List<Goal>, onGoalUpdated: () -> Unit = {}) {
                     onClick = {
                         val amt = newCurrentAmount.toDoubleOrNull() ?: 0.0
                         if (goalToEdit != null) {
+                            if (amt > goalToEdit!!.targetAmount) {
+                                Toast.makeText(context, "O valor não pode ultrapassar a meta (${currencyFormat.format(goalToEdit!!.targetAmount)})", Toast.LENGTH_SHORT).show()
+                                return@Button
+                            }
                             isUpdating = true
                             coroutineScope.launch {
                                 try {

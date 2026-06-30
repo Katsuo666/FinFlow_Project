@@ -1,6 +1,5 @@
 package com.example.ui
 
-import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.util.Base64
@@ -28,6 +27,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.graphics.scale
 import com.example.api.RetrofitClient
 import com.example.model.CategoryRequest
 import com.example.model.PasswordUpdateRequest
@@ -35,8 +35,6 @@ import com.example.model.ProfileUpdateRequest
 import com.example.utils.TokenManager
 import kotlinx.coroutines.launch
 import java.io.ByteArrayOutputStream
-import java.io.File
-import java.io.FileOutputStream
 import java.io.InputStream
 
 // ---------------- ECRÃ DO SEPARADOR PERFIL ----------------
@@ -71,7 +69,7 @@ fun PerfilScreen(
                             val ratio = originalBitmap.width.toFloat() / originalBitmap.height.toFloat()
                             val targetWidth = if (ratio > 1) 300 else (300 * ratio).toInt()
                             val targetHeight = if (ratio > 1) (300 / ratio).toInt() else 300
-                            Bitmap.createScaledBitmap(originalBitmap, targetWidth, targetHeight, true)
+                            originalBitmap.scale(targetWidth, targetHeight, true)
                         } else {
                             originalBitmap
                         }
@@ -256,8 +254,6 @@ fun PerfilScreen(
                 ProfileDetailRow(label = "Aplicação", value = "FinFlow Mobile")
                 HorizontalDivider(color = Color(0xFF2C2C2C))
                 ProfileDetailRow(label = "Idioma", value = "Português (Portugal)")
-                HorizontalDivider(color = Color(0xFF2C2C2C))
-                ProfileDetailRow(label = "Tipo de Conta", value = "Utilizador Standard")
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(onClick = { showEditProfileDialog = true }, modifier = Modifier.weight(1f)) {

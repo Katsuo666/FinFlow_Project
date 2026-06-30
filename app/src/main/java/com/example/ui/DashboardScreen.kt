@@ -331,14 +331,6 @@ fun DashboardScreen(
                             val limitVal = card.limitAmount ?: 0.0
                             val limitDisplay = if (card.type.uppercase() == "CREDIT") limitVal - billAmount else limitVal
 
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Text(
-                                text = currencyFormat.format(billAmount),
-                                color = Color.White,
-                                fontSize = 28.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-
                             if ((card.type.uppercase() == "CREDIT") && (limitVal > 0.0)) {
                                 Spacer(modifier = Modifier.height(16.dp))
                                 Row(

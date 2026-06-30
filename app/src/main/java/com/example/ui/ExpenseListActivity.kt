@@ -151,18 +151,25 @@ fun ExpenseListContent(resumeEpoch: Long = 0L) {
     var transactions by remember { mutableStateOf(emptyList<Expense>()) }
     var isLoading by remember { mutableStateOf(true) }
 
-    val today = try {
-        java.time.LocalDate.now()
-    } catch (e: Exception) {
-        java.time.LocalDate.of(2026, 6, 8)
-    }
-
     val parseLocalDate = { dateStr: String ->
         try {
             java.time.LocalDate.parse(dateStr)
         } catch (e: Exception) {
             null
         }
+    }
+
+    val today = remember(transactions) {
+        val now = try {
+            java.time.LocalDate.now()
+        } catch (e: Exception) {
+            java.time.LocalDate.of(2026, 6, 8)
+        }
+        
+        // Garantir que o "hoje" é no mínimo a data da transação mais recente, 
+        // caso estejamos a testar com dados "no futuro" (comum em mocks/ambientes de teste)
+        val maxTxDate = transactions.mapNotNull { parseLocalDate(it.date) }.maxOrNull()
+        if (maxTxDate != null && maxTxDate.isAfter(now)) maxTxDate else now
     }
 
     val loadTransactions = suspend {
