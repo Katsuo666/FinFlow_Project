@@ -32,9 +32,8 @@ object RetrofitClient {
                 .addInterceptor(logging)
                 .addInterceptor { chain ->
                     val request = chain.request()
-                    val requestBuilder = request.newBuilder()
-                    
                     // Header obrigatório conforme documentação
+                    val requestBuilder = request.newBuilder()
                     requestBuilder.addHeader("Content-Type", "application/json")
                     requestBuilder.addHeader("Accept", "application/json")
                     

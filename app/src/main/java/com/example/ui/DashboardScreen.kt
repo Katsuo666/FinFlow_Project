@@ -21,6 +21,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.style.TextOverflow
 import com.example.model.Expense
 import com.example.model.Card
 import java.text.NumberFormat
@@ -287,6 +288,7 @@ fun DashboardScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .background(Color(0xFF131313))
+                            .height(IntrinsicSize.Min)
                     ) {
                         Spacer(
                             modifier = Modifier
@@ -433,6 +435,7 @@ fun TransactionRowItem(item: Expense, currencyFormat: NumberFormat) {
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Row(
+                modifier = Modifier.weight(1f),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
@@ -452,12 +455,14 @@ fun TransactionRowItem(item: Expense, currencyFormat: NumberFormat) {
                         modifier = Modifier.size(18.dp)
                     )
                 }
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = item.description,
                         color = Color.White,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 15.sp
+                        fontSize = 15.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                     Text(
                         text = item.date,
@@ -467,14 +472,18 @@ fun TransactionRowItem(item: Expense, currencyFormat: NumberFormat) {
                 }
             }
 
+            Spacer(modifier = Modifier.width(8.dp))
+
             Column(
-                horizontalAlignment = Alignment.End
+                horizontalAlignment = Alignment.End,
+                modifier = Modifier.wrapContentWidth()
             ) {
                 Text(
                     text = (if (item.isIncome) "+ " else "- ") + currencyFormat.format(item.amount),
                     color = if (item.isIncome) Color(0xFF00E676) else Color.White,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 15.sp
+                    fontSize = 15.sp,
+                    textAlign = TextAlign.End
                 )
                 Box(
                     modifier = Modifier
@@ -484,7 +493,9 @@ fun TransactionRowItem(item: Expense, currencyFormat: NumberFormat) {
                     Text(
                         text = item.displayCategoryName,
                         color = Color.LightGray,
-                        fontSize = 11.sp
+                        fontSize = 11.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
             }

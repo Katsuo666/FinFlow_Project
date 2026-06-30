@@ -81,10 +81,14 @@ class LoginActivity : ComponentActivity() {
                                         val p = profileRes.body()!!
                                         // Guardar todos os campos, incluindo a Bio vinda do servidor
                                         tokenManager.saveUser(p.name ?: name, p.email ?: email, p.bio)
+                                        // Sincronizar também a imagem de perfil
+                                        if (!p.avatarUrl.isNullOrEmpty()) {
+                                            tokenManager.saveProfilePicture(p.avatarUrl)
+                                        }
                                     } else {
                                         tokenManager.saveUser(name, email)
                                     }
-                                } catch (e: Exception) {
+                                } catch (_: Exception) {
                                     tokenManager.saveUser(name, email)
                                 } finally {
                                     Toast.makeText(this@LoginActivity, "Bem-vindo!", Toast.LENGTH_SHORT).show()

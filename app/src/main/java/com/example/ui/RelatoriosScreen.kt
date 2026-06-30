@@ -29,12 +29,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.core.content.FileProvider
+import androidx.core.graphics.toColorInt
 import com.example.model.Expense
 import com.example.utils.TokenManager
 import java.io.File
 import java.io.FileOutputStream
 import java.text.NumberFormat
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 // ---------------- ECRÃ DO SEPARADOR RELATÓRIOS ----------------
@@ -57,15 +61,15 @@ fun RelatoriosScreen(allIncomes: List<Expense>, allExpenses: List<Expense>) {
 
     val today = remember {
         try {
-            java.time.LocalDate.now()
+            LocalDate.now()
         } catch (_: Exception) {
-            java.time.LocalDate.of(2026, 6, 8)
+            LocalDate.of(2026, 6, 8)
         }
     }
 
     val parseLocalDate = { dateStr: String ->
         try {
-            java.time.LocalDate.parse(dateStr)
+            LocalDate.parse(dateStr)
         } catch (_: Exception) {
             null
         }
@@ -89,11 +93,15 @@ fun RelatoriosScreen(allIncomes: List<Expense>, allExpenses: List<Expense>) {
         map
     }
 
-    val moradiaAmt = groupedData.entries.asSequence().filter { it.key.contains("Moradia") }.sumOf { it.value }
+    val moradiaAmt = groupedData.entries.asSequence()
+        .filter { it.key.contains("Moradia") }
+        .sumOf { it.value }
     val alimentacaoAmt = groupedData.getOrDefault("Alimentação", 0.0)
     val transporteAmt = groupedData.getOrDefault("Transporte", 0.0)
     val lazerAmt = groupedData.getOrDefault("Lazer", 0.0)
-    val saudeAmt = groupedData.entries.asSequence().filter { it.key.lowercase().contains("saúde") || it.key.lowercase().contains("saude") }.sumOf { it.value }
+    val saudeAmt = groupedData.entries.asSequence()
+        .filter { it.key.lowercase().contains("saúde") || it.key.lowercase().contains("saude") }
+        .sumOf { it.value }
     val salarioAmt = groupedData.getOrDefault("Salário", 0.0)
     val outrosAmt = groupedData.getOrDefault("Outros", 0.0)
 
@@ -121,7 +129,7 @@ fun RelatoriosScreen(allIncomes: List<Expense>, allExpenses: List<Expense>) {
     val outrosPct = pcts[6]
 
     val maxPctValue = pcts.maxOrNull() ?: 0f
-    val minPctValue = pcts.filter { it > 0 }.minOrNull() ?: 0f
+    val minPctValue = pcts.asSequence().filter { it > 0 }.minOrNull() ?: 0f
 
     val moradiaStr = currencyFormat.format(moradiaAmt)
     val alimentacaoStr = currencyFormat.format(alimentacaoAmt)
@@ -132,17 +140,21 @@ fun RelatoriosScreen(allIncomes: List<Expense>, allExpenses: List<Expense>) {
     val outrosStr = currencyFormat.format(outrosAmt)
 
     val chartPoints = remember(allIncomes, allExpenses, selectedPeriod) {
-        val formatter = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd")
-        val dtfAbbrWeek = java.time.format.DateTimeFormatter.ofPattern("dd/MM")
-        val dtfMonth = java.time.format.DateTimeFormatter.ofPattern("MMM", Locale("pt", "PT"))
+        val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
+        val dtfAbbrWeek = DateTimeFormatter.ofPattern("dd/MM")
+        val dtfMonth = DateTimeFormatter.ofPattern("MMM", Locale("pt", "PT"))
 
         when (selectedPeriod) {
             "1 Semana" -> {
                 (0..6).map { offset ->
                     val date = today.minusDays((6 - offset).toLong())
                     val dateStr = date.format(formatter)
-                    val incSum = allIncomes.asSequence().filter { it.date == dateStr }.sumOf { it.amount }
-                    val expSum = allExpenses.asSequence().filter { it.date == dateStr }.sumOf { it.amount }
+                    val incSum = allIncomes.asSequence()
+                        .filter { it.date == dateStr }
+                        .sumOf { it.amount }
+                    val expSum = allExpenses.asSequence()
+                        .filter { it.date == dateStr }
+                        .sumOf { it.amount }
                     ChartPoint(
                         label = date.format(dtfAbbrWeek),
                         income = incSum,
@@ -174,11 +186,11 @@ fun RelatoriosScreen(allIncomes: List<Expense>, allExpenses: List<Expense>) {
                     val targetMonth = today.minusMonths((2 - offset).toLong())
                     val incSum = allIncomes.filter {
                         val d = parseLocalDate(it.date)
-                        d != null && d.year == targetMonth.year && d.month == targetMonth.month
+                        (d != null) && (d.year == targetMonth.year) && (d.month == targetMonth.month)
                     }.sumOf { it.amount }
                     val expSum = allExpenses.filter {
                         val d = parseLocalDate(it.date)
-                        d != null && d.year == targetMonth.year && d.month == targetMonth.month
+                        (d != null) && (d.year == targetMonth.year) && (d.month == targetMonth.month)
                     }.sumOf { it.amount }
                     ChartPoint(
                         label = targetMonth.format(dtfMonth).replace(".", "").replaceFirstChar { it.uppercase() },
@@ -192,11 +204,11 @@ fun RelatoriosScreen(allIncomes: List<Expense>, allExpenses: List<Expense>) {
                     val targetMonth = today.minusMonths((5 - offset).toLong())
                     val incSum = allIncomes.filter {
                         val d = parseLocalDate(it.date)
-                        d != null && d.year == targetMonth.year && d.month == targetMonth.month
+                        (d != null) && (d.year == targetMonth.year) && (d.month == targetMonth.month)
                     }.sumOf { it.amount }
                     val expSum = allExpenses.filter {
                         val d = parseLocalDate(it.date)
-                        d != null && d.year == targetMonth.year && d.month == targetMonth.month
+                        (d != null) && (d.year == targetMonth.year) && (d.month == targetMonth.month)
                     }.sumOf { it.amount }
                     ChartPoint(
                         label = targetMonth.format(dtfMonth).replace(".", "").replaceFirstChar { it.uppercase() },
@@ -210,11 +222,11 @@ fun RelatoriosScreen(allIncomes: List<Expense>, allExpenses: List<Expense>) {
                     val targetMonth = today.minusMonths((11 - offset).toLong())
                     val incSum = allIncomes.filter {
                         val d = parseLocalDate(it.date)
-                        d != null && d.year == targetMonth.year && d.month == targetMonth.month
+                        (d != null) && (d.year == targetMonth.year) && (d.month == targetMonth.month)
                     }.sumOf { it.amount }
                     val expSum = allExpenses.filter {
                         val d = parseLocalDate(it.date)
-                        d != null && d.year == targetMonth.year && d.month == targetMonth.month
+                        (d != null) && (d.year == targetMonth.year) && (d.month == targetMonth.month)
                     }.sumOf { it.amount }
                     ChartPoint(
                         label = targetMonth.format(dtfMonth).replace(".", "").replaceFirstChar { it.uppercase() },
@@ -478,14 +490,16 @@ fun RelatoriosScreen(allIncomes: List<Expense>, allExpenses: List<Expense>) {
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
+                        // Indicador de Progresso em Rosca - Tamanho adaptável
                         Box(
-                            modifier = Modifier.size(100.dp),
+                            modifier = Modifier
+                                .size(90.dp)
+                                .padding(4.dp),
                             contentAlignment = Alignment.Center
                         ) {
-                            Canvas(modifier = Modifier.size(100.dp)) {
+                            Canvas(modifier = Modifier.fillMaxSize()) {
                                 val strokeWidth = 14.dp.toPx()
                                 drawArc(color = Color(0xFF2C2C2C), startAngle = 0f, sweepAngle = 360f, useCenter = false, style = Stroke(strokeWidth))
                                 
@@ -503,9 +517,12 @@ fun RelatoriosScreen(allIncomes: List<Expense>, allExpenses: List<Expense>) {
                             }
                         }
 
+                        // Métricas de distribuição - Ocupa o espaço restante
                         Column(
                             verticalArrangement = Arrangement.spacedBy(6.dp),
-                            modifier = Modifier.padding(start = 16.dp)
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(start = 12.dp)
                         ) {
                             CategoryLegendRow("Moradia", moradiaStr, moradiaPct, Color(0xFF00E676), maxPctValue, minPctValue)
                             CategoryLegendRow("Alimentação", alimentacaoStr, alimentacaoPct, Color(0xFF45FEC9), maxPctValue, minPctValue)
@@ -535,31 +552,51 @@ fun CategoryLegendRow(
     val isMin = pct > 0f && pct == minPct
     
     Row(
-        modifier = Modifier.fillMaxWidth(0.9f),
+        modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            Box(modifier = Modifier.size(8.dp).background(color, CircleShape))
-            Text(name, color = Color.LightGray, fontSize = 11.sp)
+        Row(
+            modifier = Modifier.weight(1f),
+            verticalAlignment = Alignment.CenterVertically, 
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Box(modifier = Modifier.size(6.dp).background(color, CircleShape))
+            Text(
+                text = name, 
+                color = Color.LightGray, 
+                fontSize = 10.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f, fill = false)
+            )
             if (isMax) {
-                Text("(MAIOR)", color = Color(0xFF00E676), fontSize = 9.sp, fontWeight = FontWeight.ExtraBold)
+                Text("(MAIOR)", color = Color(0xFF00E676), fontSize = 8.sp, fontWeight = FontWeight.ExtraBold)
             }
             if (isMin) {
-                Text("(MENOR)", color = Color(0xFFFFB4AB), fontSize = 9.sp, fontWeight = FontWeight.ExtraBold)
+                Text("(MENOR)", color = Color(0xFFFFB4AB), fontSize = 8.sp, fontWeight = FontWeight.ExtraBold)
             }
         }
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("${(pct * 100).toInt()}%", color = Color.Gray, fontSize = 11.sp)
-            Text(amount, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+        
+        Spacer(modifier = Modifier.width(8.dp))
+
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text("${(pct * 100).toInt()}%", color = Color.Gray, fontSize = 10.sp)
+            Text(
+                text = amount, 
+                color = Color.White, 
+                fontSize = 10.sp, 
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.End
+            )
         }
     }
 }
 
 private fun generateAndSharePDF(
     context: Context,
-    userName: String,
-    userEmail: String,
+    userName: String?,
+    userEmail: String?,
     incomes: Double,
     expenses: Double,
     moradia: String,
@@ -577,7 +614,7 @@ private fun generateAndSharePDF(
     val paint = Paint()
 
     // Header / Logo
-    paint.color = android.graphics.Color.parseColor("#00FF66")
+    paint.color = "#00C853".toColorInt()
     paint.isFakeBoldText = true
     paint.textSize = 40f
     canvas.drawText("$", 50f, 60f, paint)
@@ -588,9 +625,9 @@ private fun generateAndSharePDF(
 
     paint.textSize = 14f
     paint.isFakeBoldText = false
-    canvas.drawText("Utilizador: $userName", 50f, 100f, paint)
-    canvas.drawText("Email: $userEmail", 50f, 120f, paint)
-    canvas.drawText("Data de Emissão: ${java.time.LocalDate.now()}", 50f, 140f, paint)
+    canvas.drawText("Utilizador: ${userName ?: "Utilizador"}", 50f, 100f, paint)
+    canvas.drawText("Email: ${userEmail ?: "N/A"}", 50f, 120f, paint)
+    canvas.drawText("Data de Emissão: ${LocalDate.now()}", 50f, 140f, paint)
 
     paint.strokeWidth = 2f
     canvas.drawLine(50f, 155f, 545f, 155f, paint)
@@ -638,10 +675,12 @@ private fun generateAndSharePDF(
 
     val file = File(context.cacheDir, "Relatorio_FinFlow.pdf")
     try {
+        if (file.exists()) file.delete()
         pdfDocument.writeTo(FileOutputStream(file))
         shareFile(context, file, "application/pdf")
     } catch (e: Exception) {
-        Toast.makeText(context, "Erro ao gerar PDF", Toast.LENGTH_SHORT).show()
+        e.printStackTrace()
+        Toast.makeText(context, "Erro ao gerar PDF: ${e.message}", Toast.LENGTH_SHORT).show()
     } finally {
         pdfDocument.close()
     }
@@ -662,8 +701,8 @@ private fun generateAndShareExcel(
     // Gerar um CSV (compatível com Excel)
     val csvContent = StringBuilder()
     csvContent.append("Categoria;Valor\n")
-    csvContent.append("Total Entradas;${incomes}\n")
-    csvContent.append("Total Saidas;${expenses}\n")
+    csvContent.append("Total Entradas;$incomes\n")
+    csvContent.append("Total Saidas;$expenses\n")
     csvContent.append("Saldo Liquido;${incomes - expenses}\n")
     csvContent.append("\n")
     csvContent.append("DETALHE POR CATEGORIA\n")
@@ -677,16 +716,20 @@ private fun generateAndShareExcel(
 
     val file = File(context.cacheDir, "Relatorio_FinFlow.csv")
     try {
+        if (file.exists()) file.delete()
         FileOutputStream(file).use { it.write(csvContent.toString().toByteArray()) }
         shareFile(context, file, "text/csv")
     } catch (e: Exception) {
-        Toast.makeText(context, "Erro ao gerar Excel/CSV", Toast.LENGTH_SHORT).show()
+        e.printStackTrace()
+        Toast.makeText(context, "Erro ao gerar Excel/CSV: ${e.message}", Toast.LENGTH_SHORT).show()
     }
 }
 
 private fun shareFile(context: Context, file: File, mimeType: String) {
     try {
-        val authority = "${context.packageName}.fileprovider"
+        // O authority deve ser EXACTAMENTE igual ao definido no AndroidManifest.xml
+        // Como o applicationId é "com.finflow.project", o authority é "com.finflow.project.fileprovider"
+        val authority = "com.finflow.project.fileprovider"
         val uri = FileProvider.getUriForFile(context, authority, file)
         val intent = Intent(Intent.ACTION_SEND).apply {
             type = mimeType
