@@ -32,7 +32,6 @@ object PdfExporter {
         val canvas = page.canvas
         val paint = Paint()
 
-        // Header / Logo
         paint.color = "#00C853".toColorInt()
         paint.isFakeBoldText = true
         paint.textSize = 40f

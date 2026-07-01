@@ -43,7 +43,6 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         tokenManager = TokenManager(this)
 
-        // Verificação de Segurança
         if (tokenManager.getToken() == null) {
             startActivity(Intent(this, LoginActivity::class.java))
             finish()
@@ -90,7 +89,6 @@ fun MainScreenContainer(
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
 
-    // Estados da API
     var balance by remember { mutableDoubleStateOf(0.0) }
     var totalIncomes by remember { mutableDoubleStateOf(0.0) }
     var totalExpenses by remember { mutableDoubleStateOf(0.0) }
@@ -101,20 +99,17 @@ fun MainScreenContainer(
     var creditCardsList by remember { mutableStateOf(emptyList<Card>()) }
     var isRefreshing by remember { mutableStateOf(value = false) }
 
-    // Estados dos Diálogos
     var showCreateGoalDialog by remember { mutableStateOf(false) }
     var showAddCardDialog by remember { mutableStateOf(false) }
     var selectedDetailCard by remember { mutableStateOf<Card?>(null) }
 
     var profileRefreshKey by remember { mutableIntStateOf(0) }
 
-    // Função para obter todos os dados da API
     val fetchAllData = suspend {
         isRefreshing = true
         try {
             val api = RetrofitClient.getApiService(context)
 
-            // Tentar obter dados do perfil para atualizar imagem e bio
             try {
                 val profileRes = api.getUserProfile()
                 if (profileRes.isSuccessful && profileRes.body() != null) {
@@ -123,14 +118,12 @@ fun MainScreenContainer(
                     if (p.avatarUrl != null) {
                         tokenManager.saveProfilePicture(p.avatarUrl)
                     }
-                    // Forçar atualização do ícone na TopBar
                     profileRefreshKey++
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
             }
 
-            // Obter receitas e despesas
             val incomesRes = api.getIncomes()
             val expensesRes = api.getExpenses()
 
@@ -144,7 +137,6 @@ fun MainScreenContainer(
             totalExpenses = expenses.sumOf { it.amount }
             balance = totalIncomes - totalExpenses
 
-            // Combinar e ordenar transações recentes (ID decrescente para as mais novas primeiro se as datas forem iguais)
             val combined = (incomes.map { it.copy(isIncome = true) } + 
                            expenses.map { it.copy(isIncome = false) })
                 .sortedWith(
@@ -153,13 +145,11 @@ fun MainScreenContainer(
                 )
             rawRecentTransactions = combined.take(6)
 
-            // Carregar metas
             val goalsRes = api.getGoals()
             if (goalsRes.isSuccessful && goalsRes.body() != null) {
                 goalsList = goalsRes.body()!!
             }
 
-            // Carregar cartões de crédito
             try {
                 val cardsRes = api.getCreditCards()
                 if (cardsRes.isSuccessful && cardsRes.body() != null) {
@@ -226,7 +216,6 @@ fun MainScreenContainer(
         }
     }
 
-    // Diálogos Reutilizáveis
     CreateGoalDialog(
         showDialog = showCreateGoalDialog,
         onDismiss = { showCreateGoalDialog = false },

@@ -83,11 +83,10 @@ fun AddExpenseScreenContent(onSuccess: () -> Unit, onCancel: () -> Unit) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
 
-    // Atributos do formulário
     var amountStr by remember { mutableStateOf("0.00") }
     var description by remember { mutableStateOf("") }
-    var rawDateString by remember { mutableStateOf("") } // dd/MM/yyyy mostrado ao utilizador
-    var isIncome by remember { mutableStateOf(false) } // Alternar entre Receita & Despesa
+    var rawDateString by remember { mutableStateOf("") }
+    var isIncome by remember { mutableStateOf(false) }
     var selectedCategory by remember { mutableStateOf<Category?>(null) }
     var isLoadingCategories by remember { mutableStateOf(false) }
     var hasCategoryLoadError by remember { mutableStateOf(false) }
@@ -138,7 +137,6 @@ fun AddExpenseScreenContent(onSuccess: () -> Unit, onCancel: () -> Unit) {
         }
     }
 
-    // No Início, carregar categorias e pré-preencher a data
     LaunchedEffect(Unit) {
         val currentDate = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date())
         rawDateString = currentDate
@@ -152,7 +150,6 @@ fun AddExpenseScreenContent(onSuccess: () -> Unit, onCancel: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Linha do Cabeçalho de Título Superior
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -167,10 +164,9 @@ fun AddExpenseScreenContent(onSuccess: () -> Unit, onCancel: () -> Unit) {
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold
             )
-            Spacer(modifier = Modifier.width(48.dp)) // Espaçador equalizador
+            Spacer(modifier = Modifier.width(48.dp))
         }
 
-        // Alternador (Toggle) para Receita vs Despesa
         Row(
             modifier = Modifier
                 .background(Color(0xFF1E1E1E), shape = RoundedCornerShape(12.dp))
@@ -201,7 +197,6 @@ fun AddExpenseScreenContent(onSuccess: () -> Unit, onCancel: () -> Unit) {
             }
         }
 
-        // 2. PAINEL DE ENTRADA DE VALOR
         Column(
             modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally
@@ -238,7 +233,6 @@ fun AddExpenseScreenContent(onSuccess: () -> Unit, onCancel: () -> Unit) {
             }
         }
 
-        // 3. Campo de Descrição
         Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text("Descrição", color = Color.Gray, fontSize = 11.sp, fontWeight = FontWeight.Bold)
             OutlinedTextField(
@@ -260,7 +254,6 @@ fun AddExpenseScreenContent(onSuccess: () -> Unit, onCancel: () -> Unit) {
             )
         }
 
-        // 4. Seletores horizontais dinâmicos de chips de categorias
         Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text("Categoria", color = Color.Gray, fontSize = 11.sp, fontWeight = FontWeight.Bold)
             if (isLoadingCategories) {
@@ -337,7 +330,6 @@ fun AddExpenseScreenContent(onSuccess: () -> Unit, onCancel: () -> Unit) {
             }
         }
 
-        // 5. Seletor de Data de Calendário
         Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text("Data", color = Color.Gray, fontSize = 11.sp, fontWeight = FontWeight.Bold)
             OutlinedTextField(
@@ -358,9 +350,8 @@ fun AddExpenseScreenContent(onSuccess: () -> Unit, onCancel: () -> Unit) {
             )
         }
 
-        Spacer(modifier = Modifier.weight(1f)) // Empurrador de elemento inferior
+        Spacer(modifier = Modifier.weight(1f))
 
-        // 6. BOTÃO DE GATILHO PARA GUARDAR TRANSAÇÃO (Página 7 "Salvar Despesa")
         Button(
             onClick = {
                 val amtValue = amountStr.toDoubleOrNull() ?: 0.0
@@ -384,8 +375,6 @@ fun AddExpenseScreenContent(onSuccess: () -> Unit, onCancel: () -> Unit) {
                     try {
                             val api = RetrofitClient.getApiService(context)
 
-                        // Se estamos a usar categorias locais de fallback, não confie no ID local.
-                        // Em vez disso, criamos/obtemos a categoria no servidor pelo seu nome.
                         val currentCategory = selectedCategory
                         val resolvedCategoryId = if (!isUsingLocalFallbackCategories && currentCategory?.id != null) {
                             currentCategory.id
@@ -406,7 +395,7 @@ fun AddExpenseScreenContent(onSuccess: () -> Unit, onCancel: () -> Unit) {
                             date = apiDate,
                             categoryId = resolvedCategoryId,
                             categoryName = currentCategory?.displayName,
-                            category = null // Enviar null para evitar erro de desserialização no servidor
+                            category = null
                         )
 
                         val response = if (isIncome) {
@@ -474,7 +463,6 @@ fun formatToApiDate(input: String): String {
             val y = parts[2]
             "$y-$m-$d"
         } else {
-            // Verificar se já está no formato correto yyyy-MM-dd
             if (input.contains("-") && input.split("-").size == 3) {
                 input
             } else {

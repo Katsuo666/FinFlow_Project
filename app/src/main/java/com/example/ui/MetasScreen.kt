@@ -27,7 +27,6 @@ import com.example.utils.CurrencyFormatter
 import kotlinx.coroutines.launch
 import java.util.Locale
 
-// ---------------- ECRÃ DO SEPARADOR METAS ----------------
 @Composable
 fun MetasScreen(goals: List<Goal>, onGoalUpdated: () -> Unit = {}) {
     val context = LocalContext.current
@@ -76,9 +75,6 @@ fun MetasScreen(goals: List<Goal>, onGoalUpdated: () -> Unit = {}) {
             )
         }
 
-        // Removido o Cartão do Total Guardado conforme solicitado
-
-        // Caixas de estatísticas
         item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -121,7 +117,6 @@ fun MetasScreen(goals: List<Goal>, onGoalUpdated: () -> Unit = {}) {
             }
         }
 
-        // Detalhes das metas
         if (filteredGoals.isEmpty()) {
             item {
                 Card(
@@ -193,7 +188,6 @@ fun MetasScreen(goals: List<Goal>, onGoalUpdated: () -> Unit = {}) {
                                 }
                             }
                             
-                            // Botão de eliminar (visível se concluída ou opcional para todas)
                             if (isCompleted) {
                                 IconButton(onClick = { goalToDelete = goal }) {
                                     Icon(Icons.Default.Delete, contentDescription = "Eliminar", tint = Color(0xFFFFB4AB))
@@ -238,7 +232,6 @@ fun MetasScreen(goals: List<Goal>, onGoalUpdated: () -> Unit = {}) {
         }
     }
 
-    // Diálogo para editar progresso da meta
     if (goalToEdit != null) {
         AlertDialog(
             onDismissRequest = { if (!isUpdating) goalToEdit = null },
@@ -299,7 +292,6 @@ fun MetasScreen(goals: List<Goal>, onGoalUpdated: () -> Unit = {}) {
             },
             dismissButton = {
                 Row {
-                    // Botão de eliminar dentro do edit (opcional)
                     TextButton(onClick = { 
                         goalToDelete = goalToEdit
                         goalToEdit = null
@@ -315,7 +307,6 @@ fun MetasScreen(goals: List<Goal>, onGoalUpdated: () -> Unit = {}) {
         )
     }
 
-    // Diálogo de confirmação de eliminação
     if (goalToDelete != null) {
         AlertDialog(
             onDismissRequest = { if (!isDeleting) goalToDelete = null },

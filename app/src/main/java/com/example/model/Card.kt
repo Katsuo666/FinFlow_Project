@@ -6,8 +6,8 @@ data class Card(
     val cardholderName: String,
     val lastFourDigits: String,
     val expirationDate: String,
-    val type: String, // "CREDIT" ou "DEBIT" (CRÉDITO ou DÉBITO)
+    val type: String,
     val limitAmount: Double? = null,
     val currentBill: Double? = null,
-    val brand: String // "VISA", "MASTERCARD", "OTHER" (OUTRO)
+    val brand: String
 )

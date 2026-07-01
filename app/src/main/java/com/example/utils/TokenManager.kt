@@ -48,7 +48,6 @@ class TokenManager(context: Context) {
     }
 
     fun saveProfilePicture(uriString: String?) {
-        // Usar commit() para garantir escrita imediata
         prefs.edit().remove(KEY_PROFILE_PIC).commit()
         prefs.edit().putString(KEY_PROFILE_PIC, uriString).commit()
     }
@@ -57,9 +56,6 @@ class TokenManager(context: Context) {
         return prefs.getString(KEY_PROFILE_PIC, null)
     }
 
-    /**
-     * Decodifica a imagem Base64 diretamente para um Bitmap nativo do Android.
-     */
     fun getProfileBitmap(): Bitmap? {
         val base64 = getProfilePicture() ?: return null
         return try {

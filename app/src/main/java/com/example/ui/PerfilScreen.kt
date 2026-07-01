@@ -36,7 +36,6 @@ import kotlinx.coroutines.launch
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
 
-// ---------------- ECRÃ DO SEPARADOR PERFIL ----------------
 @Composable
 fun PerfilScreen(
     tokenManager: TokenManager,
@@ -62,7 +61,6 @@ fun PerfilScreen(
                     val originalBitmap = BitmapFactory.decodeStream(inputStream)
                     
                     if (originalBitmap != null) {
-                        // 1. Redimensionar mais agressivamente para garantir estabilidade (300x300)
                         val scaledBitmap = if (originalBitmap.width > 300 || originalBitmap.height > 300) {
                             val ratio = originalBitmap.width.toFloat() / originalBitmap.height.toFloat()
                             val targetWidth = if (ratio > 1) 300 else (300 * ratio).toInt()
@@ -76,21 +74,17 @@ fun PerfilScreen(
                         scaledBitmap.compress(Bitmap.CompressFormat.JPEG, 60, outputStream)
                         val bytes = outputStream.toByteArray()
                         
-                        // 2. Converter para Base64 com prefixo correto
                         val base64Image = "data:image/jpeg;base64," + Base64.encodeToString(bytes, Base64.NO_WRAP)
                         
-                        // Guardar IMEDIATAMENTE e atualizar o Bitmap nativo
                         tokenManager.saveProfilePicture(base64Image)
                         profileBitmap = scaledBitmap
                         onProfileUpdated()
 
-                        // 3. Enviar para o servidor em background
                         coroutineScope.launch {
                             try {
                                 val api = RetrofitClient.getApiService(context)
                                 api.updateUserAvatar(mapOf("avatarUrl" to base64Image))
                             } catch (_: Exception) {
-                                // Erro silencioso ou retry em background
                             }
                         }
                         
@@ -156,7 +150,6 @@ fun PerfilScreen(
     ) {
         Spacer(modifier = Modifier.height(16.dp))
 
-    // Acento visual do avatar com clique para carregar e indicador de edição
     Box(
         modifier = Modifier
             .size(110.dp)
@@ -194,7 +187,6 @@ fun PerfilScreen(
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        // Títulos de Nome e E-mail
         Text(
             text = tokenManager.getUserName(),
             color = Color.White,
@@ -209,7 +201,6 @@ fun PerfilScreen(
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // Cartão de itens de conteúdo do perfil
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = Color(0xFF1C1C1E)),
@@ -234,7 +225,6 @@ fun PerfilScreen(
             }
         }
 
-        // Diálogo de Editar Perfil
         if (showEditProfileDialog) {
             var firstName by remember { mutableStateOf(tokenManager.getUserName().split(" ").firstOrNull() ?: "") }
             var lastNameDialog by remember { mutableStateOf(tokenManager.getUserName().split(" ").asSequence().drop(1).joinToString(" ")) }
@@ -278,7 +268,6 @@ fun PerfilScreen(
             )
         }
 
-        // Diálogo de Alterar Password
         if (showChangePasswordDialog) {
             var oldPass by remember { mutableStateOf("") }
             var newPass by remember { mutableStateOf("") }
@@ -323,7 +312,6 @@ fun PerfilScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Botão "Apagar Conta" com contorno vermelho
         OutlinedButton(
             onClick = { showDeleteConfirm = true },
             modifier = Modifier.fillMaxWidth(),
@@ -337,7 +325,6 @@ fun PerfilScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Botão de Sair personalizado
         Button(
             onClick = onLogout,
             modifier = Modifier

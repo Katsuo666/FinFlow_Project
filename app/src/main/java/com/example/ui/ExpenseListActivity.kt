@@ -164,9 +164,7 @@ fun ExpenseListContent(resumeEpoch: Long = 0L) {
         } catch (e: Exception) {
             java.time.LocalDate.of(2026, 6, 8)
         }
-        
-        // Garantir que o "hoje" é no mínimo a data da transação mais recente, 
-        // caso estejamos a testar com dados "no futuro" (comum em mocks/ambientes de teste)
+
         val maxTxDate = transactions.mapNotNull { parseLocalDate(it.date) }.maxOrNull()
         if (maxTxDate != null && maxTxDate.isAfter(now)) maxTxDate else now
     }
@@ -181,7 +179,6 @@ fun ExpenseListContent(resumeEpoch: Long = 0L) {
             val exps = responseExpenses.body() ?: emptyList()
             val incs = responseIncomes.body() ?: emptyList()
 
-            // Mapear e combinar
             transactions = (exps.map { it.copy(isIncome = false) } + incs.map { it.copy(isIncome = true) })
                 .sortedWith(
                     compareByDescending<Expense> { it.date }
@@ -200,7 +197,6 @@ fun ExpenseListContent(resumeEpoch: Long = 0L) {
         loadTransactions()
     }
 
-    // Cálculo de filtros
     val filteredTransactions = remember(transactions, searchQuery, activeFilter) {
         transactions.filter { tx ->
             val matchQuery = searchQuery.isEmpty() || tx.description.contains(searchQuery, ignoreCase = true) || tx.displayCategoryName.contains(searchQuery, ignoreCase = true)
@@ -319,7 +315,6 @@ fun ExpenseListContent(resumeEpoch: Long = 0L) {
             }
         }
 
-        // Cartões de Resumo Agregados (Total Gasto e Maior Categoria)
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -342,7 +337,6 @@ fun ExpenseListContent(resumeEpoch: Long = 0L) {
                 }
             }
 
-            // Caixa de Maior Categoria
             Card(
                 modifier = Modifier.weight(1f),
                 colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E)),
@@ -372,7 +366,6 @@ fun ExpenseListContent(resumeEpoch: Long = 0L) {
             }
         }
 
-        // Lista de transações ordenada e estruturada
         if (isLoading) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
@@ -384,7 +377,7 @@ fun ExpenseListContent(resumeEpoch: Long = 0L) {
                 contentPadding = PaddingValues(bottom = 24.dp)
             ) {
                 val grouped = filteredTransactions.groupBy {
-                    it.date.substringBefore(",") // Categorizador de dia simplista, ex: "Hoje" / "Ontem"
+                    it.date.substringBefore(",")
                 }
 
                 if (grouped.isEmpty()) {

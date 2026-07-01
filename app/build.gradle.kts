@@ -11,7 +11,6 @@ android {
   compileSdk = 35
 
   defaultConfig {
-    // Identificador único da aplicação
     applicationId = "com.finflow.project"
     minSdk = 24
     targetSdk = 35

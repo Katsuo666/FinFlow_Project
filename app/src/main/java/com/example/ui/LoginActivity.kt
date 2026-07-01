@@ -49,10 +49,8 @@ class LoginActivity : ComponentActivity() {
         enableEdgeToEdge()
         tokenManager = TokenManager(this)
 
-        // Limpar o cache do Retrofit para garantir que novos logins não usem dados antigos
         RetrofitClient.reset()
 
-        // Se já estiver logado, ignorar a LoginActivity
         val isLoggingOut = intent.getBooleanExtra("LOGOUT", false)
         if (!isLoggingOut && tokenManager.getToken() != null) {
             startActivity(Intent(this, MainActivity::class.java))
@@ -71,17 +69,13 @@ class LoginActivity : ComponentActivity() {
                         LoginScreenContent { token, name, email ->
                             tokenManager.saveToken(token)
                             
-                            // Usar lifecycleScope para buscar o perfil completo ANTES de entrar
-                            // Isto garante que a Bio e outros dados são carregados do servidor no login
                             lifecycleScope.launch {
                                 try {
                                     val api = RetrofitClient.getApiService(this@LoginActivity)
                                     val profileRes = api.getUserProfile()
                                     if (profileRes.isSuccessful && profileRes.body() != null) {
                                         val p = profileRes.body()!!
-                                        // Guardar todos os campos, incluindo a Bio vinda do servidor
                                         tokenManager.saveUser(p.name ?: name, p.email ?: email, p.bio)
-                                        // Sincronizar também a imagem de perfil
                                         if (!p.avatarUrl.isNullOrEmpty()) {
                                             tokenManager.saveProfilePicture(p.avatarUrl)
                                         }

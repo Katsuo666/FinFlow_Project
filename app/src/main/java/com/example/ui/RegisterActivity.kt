@@ -106,7 +106,6 @@ fun RegisterScreenContent(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // Emblema/Ícone da Aplicação
             Box(
                 modifier = Modifier
                     .size(68.dp)

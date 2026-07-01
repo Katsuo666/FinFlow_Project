@@ -43,7 +43,6 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
-// ---------------- ECRÃ DO SEPARADOR RELATÓRIOS ----------------
 data class ChartPoint(val label: String, val income: Double, val expense: Double)
 
 @Composable
@@ -77,7 +76,6 @@ fun RelatoriosScreen(allIncomes: List<Expense>, allExpenses: List<Expense>) {
         if (maxTxDate != null && maxTxDate.isAfter(now)) maxTxDate else now
     }
 
-    // Lógica de agrupamento robusta que coincide com o modelo Expense
     val groupedData = remember(allExpenses, allIncomes) {
         val map = mutableMapOf<String, Double>()
         
@@ -263,7 +261,6 @@ fun RelatoriosScreen(allIncomes: List<Expense>, allExpenses: List<Expense>) {
             )
         }
 
-        // Botões de Exportação PDF / Excel
         item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -321,7 +318,6 @@ fun RelatoriosScreen(allIncomes: List<Expense>, allExpenses: List<Expense>) {
             }
         }
 
-        // Cartão de Resumo
         item {
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -349,7 +345,6 @@ fun RelatoriosScreen(allIncomes: List<Expense>, allExpenses: List<Expense>) {
             }
         }
 
-        // Pré-visualização do gráfico de fluxo de caixa
         item {
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -477,7 +472,6 @@ fun RelatoriosScreen(allIncomes: List<Expense>, allExpenses: List<Expense>) {
             }
         }
 
-        // Visualizador de Distribuição de Gastos (Unificado)
         item {
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -492,7 +486,6 @@ fun RelatoriosScreen(allIncomes: List<Expense>, allExpenses: List<Expense>) {
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Indicador de Progresso em Rosca - Tamanho adaptável
                         Box(
                             modifier = Modifier
                                 .size(90.dp)
@@ -517,7 +510,6 @@ fun RelatoriosScreen(allIncomes: List<Expense>, allExpenses: List<Expense>) {
                             }
                         }
 
-                        // Métricas de distribuição - Ocupa o espaço restante
                         Column(
                             verticalArrangement = Arrangement.spacedBy(6.dp),
                             modifier = Modifier

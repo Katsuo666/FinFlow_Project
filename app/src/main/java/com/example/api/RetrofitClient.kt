@@ -25,19 +25,16 @@ object RetrofitClient {
                 level = HttpLoggingInterceptor.Level.BODY
             }
 
-            // Cliente OkHttp com interceptor de autenticação e timeouts de 30 segundos
             val client = OkHttpClient.Builder()
                 .connectTimeout(30, TimeUnit.SECONDS)
                 .readTimeout(30, TimeUnit.SECONDS)
                 .addInterceptor(logging)
                 .addInterceptor { chain ->
                     val request = chain.request()
-                    // Header obrigatório conforme documentação
                     val requestBuilder = request.newBuilder()
                     requestBuilder.addHeader("Content-Type", "application/json")
                     requestBuilder.addHeader("Accept", "application/json")
                     
-                    // NUNCA enviar o token para rotas de autenticação (/api/auth/)
                     val isAuthRoute = request.url.encodedPath.contains("/api/auth")
                     val token = tokenManager.getToken()
                     

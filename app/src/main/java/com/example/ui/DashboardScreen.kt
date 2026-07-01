@@ -28,7 +28,6 @@ import com.example.utils.CurrencyFormatter
 import java.text.NumberFormat
 import java.util.Locale
 
-// ---------------- ECRÃ DO SEPARADOR DASHBOARD ----------------
 @Composable
 fun DashboardScreen(
     balance: Double,
@@ -51,7 +50,6 @@ fun DashboardScreen(
         contentPadding = PaddingValues(bottom = 24.dp)
     ) {
         item {
-            // Espaçador para o espaçamento do Cabeçalho Superior
             Spacer(modifier = Modifier.height(8.dp))
         }
 
@@ -72,7 +70,6 @@ fun DashboardScreen(
             }
         }
 
-        // 1. Cartão de Saldo Total
         item {
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -132,13 +129,11 @@ fun DashboardScreen(
             }
         }
 
-        // 2. Linha de Receitas & Despesas
         item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // Cartão de Receitas
                 Card(
                     modifier = Modifier.weight(1f),
                     colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E)),
@@ -170,7 +165,6 @@ fun DashboardScreen(
                     }
                 }
 
-                // Cartão de Despesas
                 Card(
                     modifier = Modifier.weight(1f),
                     colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E)),
@@ -204,7 +198,6 @@ fun DashboardScreen(
             }
         }
 
-        // 3. Cartão(ões) Black
         item {
             Row(
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
@@ -357,7 +350,6 @@ fun DashboardScreen(
             }
         }
 
-        // 4. Cabeçalho de Atividades Recentes
         item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -380,7 +372,6 @@ fun DashboardScreen(
             }
         }
 
-        // 5. Itens da lista de transações recentes
         if (recentTransactions.isEmpty()) {
             item {
                 Card(

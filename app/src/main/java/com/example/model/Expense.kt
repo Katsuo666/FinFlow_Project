@@ -4,15 +4,14 @@ data class Expense(
     val id: Int?,
     val description: String,
     val amount: Double,
-    val date: String, // formato yyyy-MM-dd
+    val date: String,
     val categoryId: Int?,
     val categoryName: String? = null,
-    @Transient val isIncome: Boolean = false, // Auxiliar para separar visuais locais
-    val category: Category? = null // Objeto de categoria aninhado para compatibilidade com Spring Boot JPA
+    @Transient val isIncome: Boolean = false,
+    val category: Category? = null
 ) {
     val displayCategoryName: String
         get() {
-            // Prioridade 1: ID da Categoria (Mapeamento padrão fixo 1-6)
             val idMapping = when (categoryId) {
                 1 -> "Salário"
                 2 -> "Moradia"
@@ -24,7 +23,6 @@ data class Expense(
             }
             if (idMapping != null) return idMapping
 
-            // Prioridade 2: Nome da Categoria oficial do objeto (Se vier do servidor/selecionado)
             val name = category?.displayName ?: categoryName
             if (!name.isNullOrBlank()) {
                 val cleanName = name.lowercase().trim()

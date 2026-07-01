@@ -18,7 +18,6 @@ object ExcelExporter {
         salario: String,
         outros: String
     ) {
-        // Gerar um CSV (compatível com Excel)
         val csvContent = StringBuilder()
         csvContent.append("Categoria;Valor\n")
         csvContent.append("Total Entradas;$incomes\n")
