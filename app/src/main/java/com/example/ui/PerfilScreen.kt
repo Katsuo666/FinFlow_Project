@@ -88,10 +88,9 @@ fun PerfilScreen(
                         coroutineScope.launch {
                             try {
                                 val api = RetrofitClient.getApiService(context)
-                                val response = api.updateUserAvatar(mapOf("avatarUrl" to base64Image))
-                                Log.d("PERFIL", "Resposta servidor: ${response.code()}")
-                            } catch (apiEx: Exception) {
-                                Log.e("PERFIL", "Erro ao sincronizar com servidor: ${apiEx.message}")
+                                api.updateUserAvatar(mapOf("avatarUrl" to base64Image))
+                            } catch (_: Exception) {
+                                // Erro silencioso ou retry em background
                             }
                         }
                         
@@ -108,7 +107,7 @@ fun PerfilScreen(
     if (showDeleteConfirm) {
         AlertDialog(
             onDismissRequest = { if (!isDeleting) showDeleteConfirm = false },
-            title = { Text("Apagar a sua conta?", color = Color.White) },
+            title = { Text("Eliminar Conta", color = Color.White) },
             text = { Text("Esta ação é completamente irreversível. Todos os seus dados de despesas, receitas e cartões serão excluídos permanentemente.", color = Color.LightGray) },
             confirmButton = {
                 Button(
@@ -119,37 +118,28 @@ fun PerfilScreen(
                                 val api = RetrofitClient.getApiService(context)
                                 val response = api.deleteAccount()
                                 if (response.isSuccessful) {
-                                    Toast.makeText(context, "A sua conta foi permanentemente apagada.", Toast.LENGTH_LONG).show()
+                                    onLogout()
                                 } else {
-                                    Toast.makeText(context, "Conta eliminada localmente com sucesso.", Toast.LENGTH_LONG).show()
+                                    Toast.makeText(context, "Erro ao eliminar conta", Toast.LENGTH_SHORT).show()
                                 }
                             } catch (e: Exception) {
-                                e.printStackTrace()
-                                Toast.makeText(context, "Servidor indisponível. Conta eliminada localmente.", Toast.LENGTH_LONG).show()
+                                Toast.makeText(context, "Erro de ligação", Toast.LENGTH_SHORT).show()
                             } finally {
                                 isDeleting = false
                                 showDeleteConfirm = false
-                                tokenManager.saveProfilePicture(null)
-                                onLogout()
                             }
                         }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFBA1A1A)),
                     enabled = !isDeleting
                 ) {
-                    if (isDeleting) {
-                        CircularProgressIndicator(modifier = Modifier.size(18.dp), color = Color.White, strokeWidth = 2.dp)
-                    } else {
-                        Text("Apagar Permanentemente")
-                    }
+                    if (isDeleting) CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White)
+                    else Text("Eliminar Definitivamente", color = Color.White)
                 }
             },
             dismissButton = {
-                TextButton(
-                    onClick = { showDeleteConfirm = false },
-                    enabled = !isDeleting
-                ) {
-                    Text("Cancelar", color = Color.LightGray)
+                TextButton(onClick = { showDeleteConfirm = false }, enabled = !isDeleting) {
+                    Text("Cancelar")
                 }
             },
             containerColor = Color(0xFF1E1E1E)
@@ -159,10 +149,10 @@ fun PerfilScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .background(Color(0xFF121212))
             .verticalScroll(rememberScrollState())
             .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(20.dp)
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -200,42 +190,24 @@ fun PerfilScreen(
                 )
             }
         }
+    }
 
-            Box(
-                modifier = Modifier
-                    .size(28.dp)
-                    .background(MaterialTheme.colorScheme.primary, CircleShape)
-                    .align(Alignment.BottomEnd),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.CameraAlt,
-                    contentDescription = "Mudar foto",
-                    tint = Color.Black,
-                    modifier = Modifier.size(14.dp)
-                )
-            }
-        }
+        Spacer(modifier = Modifier.height(20.dp))
 
         // Títulos de Nome e E-mail
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            Text(
-                text = tokenManager.getUserName(),
-                color = Color.White,
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Bold
-            )
-            Text(
-                text = tokenManager.getUserEmail(),
-                color = Color.Gray,
-                fontSize = 14.sp
-            )
-        }
+        Text(
+            text = tokenManager.getUserName(),
+            color = Color.White,
+            fontSize = 22.sp,
+            fontWeight = FontWeight.Bold
+        )
+        Text(
+            text = tokenManager.getUserEmail(),
+            color = Color.Gray,
+            fontSize = 14.sp
+        )
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(32.dp))
 
         // Cartão de itens de conteúdo do perfil
         Card(
@@ -243,17 +215,15 @@ fun PerfilScreen(
             colors = CardDefaults.cardColors(containerColor = Color(0xFF1C1C1E)),
             shape = RoundedCornerShape(16.dp)
         ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
+            Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 ProfileDetailRow(label = "Bio", value = userBio.ifEmpty { "Sem biografia" })
-                HorizontalDivider(color = Color(0xFF2C2C2C))
+                Divider(color = Color(0xFF2C2C2E))
                 ProfileDetailRow(label = "Aplicação", value = "FinFlow Mobile")
-                HorizontalDivider(color = Color(0xFF2C2C2C))
+                Divider(color = Color(0xFF2C2C2E))
                 ProfileDetailRow(label = "Idioma", value = "Português (Portugal)")
+                
                 Spacer(modifier = Modifier.height(8.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Button(onClick = { showEditProfileDialog = true }, modifier = Modifier.weight(1f)) {
                         Text("Editar Perfil")
                     }
@@ -269,16 +239,15 @@ fun PerfilScreen(
             var firstName by remember { mutableStateOf(tokenManager.getUserName().split(" ").firstOrNull() ?: "") }
             var lastNameDialog by remember { mutableStateOf(tokenManager.getUserName().split(" ").asSequence().drop(1).joinToString(" ")) }
             var bio by remember { mutableStateOf(userBio) }
+
             AlertDialog(
                 onDismissRequest = { showEditProfileDialog = false },
-                title = { Text("Editar Perfil", color = Color.White) },
+                title = { Text("Editar Perfil") },
                 text = {
-                    Column {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedTextField(value = firstName, onValueChange = { firstName = it }, label = { Text("Nome") })
-                        Spacer(modifier = Modifier.height(8.dp))
                         OutlinedTextField(value = lastNameDialog, onValueChange = { lastNameDialog = it }, label = { Text("Sobrenome") })
-                        Spacer(modifier = Modifier.height(8.dp))
-                        OutlinedTextField(value = bio, onValueChange = { bio = it }, label = { Text("Bio") })
+                        OutlinedTextField(value = bio, onValueChange = { bio = it }, label = { Text("Bio") }, maxLines = 3)
                     }
                 },
                 confirmButton = {
@@ -291,22 +260,18 @@ fun PerfilScreen(
                                     val body = response.body()!!
                                     val fullName = body.name ?: "$firstName $lastNameDialog".trim()
                                     tokenManager.saveUser(fullName, body.email ?: tokenManager.getUserEmail(), bio)
-                                    userBio = bio
-                                    Toast.makeText(context, "Perfil atualizado", Toast.LENGTH_SHORT).show()
                                 } else {
                                     val fullName = "$firstName $lastNameDialog".trim()
                                     tokenManager.saveUser(fullName, tokenManager.getUserEmail(), bio)
-                                    userBio = bio
-                                    Toast.makeText(context, "Perfil atualizado localmente", Toast.LENGTH_SHORT).show()
                                 }
+                                userBio = bio
+                                Toast.makeText(context, "Perfil atualizado!", Toast.LENGTH_SHORT).show()
                             } catch (e: Exception) {
-                                e.printStackTrace()
-                                Toast.makeText(context, "Erro de rede: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
-                            } finally {
-                                showEditProfileDialog = false
+                                Toast.makeText(context, "Erro ao atualizar", Toast.LENGTH_SHORT).show()
                             }
+                            showEditProfileDialog = false
                         }
-                    }) { Text("Salvar") }
+                    }) { Text("Guardar") }
                 },
                 dismissButton = { TextButton(onClick = { showEditProfileDialog = false }) { Text("Cancelar") } },
                 containerColor = Color(0xFF1E1E1E)
@@ -318,72 +283,59 @@ fun PerfilScreen(
             var oldPass by remember { mutableStateOf("") }
             var newPass by remember { mutableStateOf("") }
             var confirmNew by remember { mutableStateOf("") }
+
             AlertDialog(
                 onDismissRequest = { showChangePasswordDialog = false },
-                title = { Text("Alterar Password", color = Color.White) },
+                title = { Text("Alterar Senha") },
                 text = {
-                    Column {
-                        OutlinedTextField(value = oldPass, onValueChange = { oldPass = it }, label = { Text("Password Atual") })
-                        Spacer(modifier = Modifier.height(8.dp))
-                        OutlinedTextField(value = newPass, onValueChange = { newPass = it }, label = { Text("Nova Password") })
-                        Spacer(modifier = Modifier.height(8.dp))
-                        OutlinedTextField(value = confirmNew, onValueChange = { confirmNew = it }, label = { Text("Confirmar Nova Password") })
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(value = oldPass, onValueChange = { oldPass = it }, label = { Text("Senha Antiga") })
+                        OutlinedTextField(value = newPass, onValueChange = { newPass = it }, label = { Text("Nova Senha") })
+                        OutlinedTextField(value = confirmNew, onValueChange = { confirmNew = it }, label = { Text("Confirmar Nova") })
                     }
                 },
                 confirmButton = {
                     Button(onClick = {
                         if (newPass != confirmNew) {
-                            Toast.makeText(context, "As senhas não coincidem", Toast.LENGTH_SHORT).show(); return@Button
+                            Toast.makeText(context, "Senhas não coincidem", Toast.LENGTH_SHORT).show()
+                            return@Button
                         }
                         coroutineScope.launch {
                             try {
                                 val api = RetrofitClient.getApiService(context)
                                 val response = api.updateUserPassword(PasswordUpdateRequest(oldPass, newPass))
                                 if (response.isSuccessful) {
-                                    Toast.makeText(context, "Password alterada com sucesso", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, "Senha alterada!", Toast.LENGTH_SHORT).show()
+                                    showChangePasswordDialog = false
                                 } else {
-                                    Toast.makeText(context, "Erro ao alterar password", Toast.LENGTH_LONG).show()
+                                    Toast.makeText(context, "Senha incorreta", Toast.LENGTH_SHORT).show()
                                 }
                             } catch (e: Exception) {
-                                e.printStackTrace()
-                                Toast.makeText(context, "Erro de rede: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
-                            } finally {
-                                showChangePasswordDialog = false
+                                Toast.makeText(context, "Erro de rede", Toast.LENGTH_SHORT).show()
                             }
                         }
-                    }) { Text("Salvar") }
+                    }) { Text("Alterar") }
                 },
                 dismissButton = { TextButton(onClick = { showChangePasswordDialog = false }) { Text("Cancelar") } },
                 containerColor = Color(0xFF1E1E1E)
             )
         }
 
-        Spacer(modifier = Modifier.weight(1f))
+        Spacer(modifier = Modifier.height(24.dp))
 
         // Botão "Apagar Conta" com contorno vermelho
         OutlinedButton(
             onClick = { showDeleteConfirm = true },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(52.dp),
-            colors = ButtonDefaults.outlinedButtonColors(
-                contentColor = Color(0xFFFFB4AB)
-            ),
-            border = BorderStroke(1.5.dp, Color(0xFFBA1A1A)),
-            shape = RoundedCornerShape(26.dp)
+            modifier = Modifier.fillMaxWidth(),
+            border = BorderStroke(1.dp, Color(0xFFBA1A1A)),
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFBA1A1A))
         ) {
-            Icon(
-                imageVector = Icons.Default.DeleteForever,
-                contentDescription = null,
-                tint = Color(0xFFFFB4AB)
-            )
+            Icon(Icons.Default.Delete, contentDescription = null)
             Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = "Apagar Conta",
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Bold
-            )
+            Text("Eliminar Minha Conta", fontWeight = FontWeight.SemiBold)
         }
+
+        Spacer(modifier = Modifier.height(16.dp))
 
         // Botão de Sair personalizado
         Button(

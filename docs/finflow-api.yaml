@@ -62,6 +62,24 @@ components:
           type: string
         email:
           type: string
+    ForgotPasswordRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+      required:
+        - email
+    ResetPasswordRequest:
+      type: object
+      properties:
+        token:
+          type: string
+        newPassword:
+          type: string
+      required:
+        - token
+        - newPassword
     DashboardResponse:
       type: object
       properties:
@@ -228,6 +246,32 @@ paths:
                 $ref: '#/components/schemas/AuthLoginResponse'
         '401':
           description: Credenciais inválidas
+  /api/auth/forgot-password:
+    post:
+      summary: Recuperação de senha - Enviar e-mail
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ForgotPasswordRequest'
+      responses:
+        '200':
+          description: E-mail de recuperação enviado
+  /api/auth/reset-password:
+    post:
+      summary: Recuperação de senha - Definir nova senha
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordRequest'
+      responses:
+        '200':
+          description: Senha redefinida com sucesso
   /api/health:
     get:
       summary: Health check (estado da app, BD, uptime)

@@ -1,6 +1,6 @@
 # FinFlow API — Documentação de Endpoints
 
-Última atualização: 2026-06-18
+Última atualização: 2026-06-30
 
 ## 🌐 URL Base
 
@@ -21,6 +21,8 @@
 |--------|------|--------------|-----------|
 | `POST` | `/api/auth/register` | Público | Registar novo utilizador |
 | `POST` | `/api/auth/login` | Público | Login (devolve token JWT + email) |
+| `POST` | `/api/auth/forgot-password` | Público | Recuperação: Enviar e-mail |
+| `POST` | `/api/auth/reset-password` | Público | Recuperação: Definir nova senha |
 | `GET`  | `/api/health` | Público | Health check (estado da app, BD, uptime) |
 | `GET`  | `/api/dashboard` | Token | Indicadores financeiros do utilizador |
 | `GET`  | `/api/incomes` | Token | Listar todas as receitas |
@@ -109,6 +111,23 @@
 {
   "oldPassword": "password_antiga",
   "newPassword": "password_nova"
+}
+```
+
+**Esqueci a Senha:**
+
+```json
+{
+  "email": "utilizador@email.com"
+}
+```
+
+**Reset de Senha:**
+
+```json
+{
+  "token": "token-recebido-por-email",
+  "newPassword": "nova-password-segura"
 }
 ```
 

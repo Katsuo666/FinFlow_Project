@@ -23,8 +23,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.api.RetrofitClient
 import com.example.model.Goal
+import com.example.utils.CurrencyFormatter
 import kotlinx.coroutines.launch
-import java.text.NumberFormat
 import java.util.Locale
 
 // ---------------- ECRÃ DO SEPARADOR METAS ----------------
@@ -32,9 +32,7 @@ import java.util.Locale
 fun MetasScreen(goals: List<Goal>, onGoalUpdated: () -> Unit = {}) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
-    val currencyFormat = NumberFormat.getCurrencyInstance(Locale("pt", "PT")).apply {
-        currency = java.util.Currency.getInstance("EUR")
-    }
+    val currencyFormat = remember { CurrencyFormatter.getCurrencyFormat() }
 
     var goalToEdit by remember { mutableStateOf<Goal?>(null) }
     var newCurrentAmount by remember { mutableStateOf("") }

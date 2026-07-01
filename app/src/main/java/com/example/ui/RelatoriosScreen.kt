@@ -1,6 +1,5 @@
 package com.example.ui
 
-import android.content.Context
 import android.content.Intent
 import android.graphics.Paint
 import android.graphics.pdf.PdfDocument
@@ -33,6 +32,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.core.content.FileProvider
 import androidx.core.graphics.toColorInt
 import com.example.model.Expense
+import com.example.utils.CurrencyFormatter
 import com.example.utils.ExcelExporter
 import com.example.utils.PdfExporter
 import com.example.utils.TokenManager
@@ -51,9 +51,7 @@ fun RelatoriosScreen(allIncomes: List<Expense>, allExpenses: List<Expense>) {
     val context = LocalContext.current
     val tokenManager = remember { TokenManager(context) }
     
-    val currencyFormat = NumberFormat.getCurrencyInstance(Locale("pt", "PT")).apply {
-        currency = java.util.Currency.getInstance("EUR")
-    }
+    val currencyFormat = remember { CurrencyFormatter.getCurrencyFormat() }
 
     val totalIncomes = allIncomes.sumOf { it.amount }
     val totalExpenses = allExpenses.sumOf { it.amount }
@@ -86,11 +84,11 @@ fun RelatoriosScreen(allIncomes: List<Expense>, allExpenses: List<Expense>) {
         (allExpenses + allIncomes).forEach { tx ->
             val catName = tx.displayCategoryName.lowercase()
             val targetKey = when {
-                catName.contains("salário") || catName.contains("vencimento") || catName.contains("venda") -> "Salário"
-                catName.contains("moradia") || catName.contains("renda") || catName.contains("luz") || catName.contains("água") || catName.contains("internet") -> "Moradia"
-                catName.contains("alimentação") || catName.contains("restaurante") || catName.contains("mercado") || catName.contains("comida") || catName.contains("óleo") || catName.contains("batata") -> "Alimentação"
-                catName.contains("transporte") || catName.contains("carro") || catName.contains("uber") || catName.contains("gasolina") -> "Transporte"
-                catName.contains("lazer") || catName.contains("viagem") || catName.contains("diversão") -> "Lazer"
+                catName.contains("salário") || catName.contains("vencimento") -> "Salário"
+                catName.contains("moradia") || catName.contains("renda") || catName.contains("luz") || catName.contains("água") -> "Moradia"
+                catName.contains("alimentação") || catName.contains("restaurante") || catName.contains("comida") -> "Alimentação"
+                catName.contains("transporte") || catName.contains("carro") || catName.contains("uber") -> "Transporte"
+                catName.contains("lazer") || catName.contains("viagem") -> "Lazer"
                 catName.contains("saúde") || catName.contains("saude") -> "Saúde"
                 else -> "Outros"
             }

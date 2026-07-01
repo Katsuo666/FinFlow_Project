@@ -10,10 +10,6 @@ import retrofit2.http.PUT
 import retrofit2.http.Path
 
 interface ApiService {
-    // Health
-    @GET("api/health")
-    suspend fun health(): Response<Unit>
-
     // Auth
     @POST("api/auth/register")
     suspend fun register(@Body request: RegisterRequest): Response<AuthResponse>
@@ -27,18 +23,12 @@ interface ApiService {
     @POST("api/auth/reset-password")
     suspend fun resetPassword(@Body request: ResetPasswordRequest): Response<Map<String, Any>>
 
-    // Incomes
+
     @GET("api/incomes")
     suspend fun getIncomes(): Response<List<Expense>>
 
-    @GET("api/incomes/{id}")
-    suspend fun getIncomeById(@Path("id") id: Int): Response<Expense>
-
     @POST("api/incomes")
     suspend fun createIncome(@Body request: Expense): Response<Expense>
-
-    @PUT("api/incomes/{id}")
-    suspend fun updateIncome(@Path("id") id: Int, @Body request: Expense): Response<Expense>
 
     @DELETE("api/incomes/{id}")
     suspend fun deleteIncome(@Path("id") id: Int): Response<Unit>
@@ -47,14 +37,8 @@ interface ApiService {
     @GET("api/expenses")
     suspend fun getExpenses(): Response<List<Expense>>
 
-    @GET("api/expenses/{id}")
-    suspend fun getExpenseById(@Path("id") id: Int): Response<Expense>
-
     @POST("api/expenses")
     suspend fun createExpense(@Body request: Expense): Response<Expense>
-
-    @PUT("api/expenses/{id}")
-    suspend fun updateExpense(@Path("id") id: Int, @Body request: Expense): Response<Expense>
 
     @DELETE("api/expenses/{id}")
     suspend fun deleteExpense(@Path("id") id: Int): Response<Unit>
@@ -73,9 +57,6 @@ interface ApiService {
     @GET("api/goals")
     suspend fun getGoals(): Response<List<Goal>>
 
-    @GET("api/goals/{id}")
-    suspend fun getGoalById(@Path("id") id: Int): Response<Goal>
-
     @POST("api/goals")
     suspend fun createGoal(@Body request: Goal): Response<Goal>
 
@@ -93,14 +74,8 @@ interface ApiService {
     @GET("api/credit-cards")
     suspend fun getCreditCards(): Response<List<Card>>
 
-    @GET("api/credit-cards/{id}")
-    suspend fun getCreditCardById(@Path("id") id: Int): Response<Card>
-
     @POST("api/credit-cards")
     suspend fun createCreditCard(@Body request: Card): Response<Card>
-
-    @PUT("api/credit-cards/{id}")
-    suspend fun updateCreditCard(@Path("id") id: Int, @Body request: Card): Response<Card>
 
     @DELETE("api/credit-cards/{id}")
     suspend fun deleteCreditCard(@Path("id") id: Int): Response<Unit>

@@ -92,8 +92,8 @@ fun MainScreenContainer(
 
     // Estados da API
     var balance by remember { mutableDoubleStateOf(0.0) }
-    var totalIncomes by remember { mutableStateOf(0.0) }
-    var totalExpenses by remember { mutableStateOf(0.0) }
+    var totalIncomes by remember { mutableDoubleStateOf(0.0) }
+    var totalExpenses by remember { mutableDoubleStateOf(0.0) }
     var rawRecentTransactions by remember { mutableStateOf(emptyList<Expense>()) }
     var allIncomesList by remember { mutableStateOf(emptyList<Expense>()) }
     var allExpensesList by remember { mutableStateOf(emptyList<Expense>()) }
@@ -256,7 +256,6 @@ fun MainScreenContainer(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun MainTopBar(tokenManager: TokenManager, onProfileClick: () -> Unit, refreshKey: Int) {
-    // Carregar o Bitmap nativo diretamente para evitar falhas do Coil
     val profileBitmap = remember(refreshKey) { tokenManager.getProfileBitmap() }
     
     TopAppBar(

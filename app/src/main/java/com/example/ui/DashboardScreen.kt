@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.style.TextOverflow
 import com.example.model.Expense
 import com.example.model.Card
+import com.example.utils.CurrencyFormatter
 import java.text.NumberFormat
 import java.util.Locale
 
@@ -40,9 +41,7 @@ fun DashboardScreen(
     onCardClick: (Card) -> Unit,
     onAddCardClick: () -> Unit,
 ) {
-    val currencyFormat = NumberFormat.getCurrencyInstance(Locale("pt", "PT")).apply {
-        currency = java.util.Currency.getInstance("EUR")
-    }
+    val currencyFormat = remember { CurrencyFormatter.getCurrencyFormat() }
 
     LazyColumn(
         modifier = Modifier

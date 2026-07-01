@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.sp
 import com.example.api.RetrofitClient
 import com.example.model.Expense
 import com.example.ui.theme.MyApplicationTheme
+import com.example.utils.CurrencyFormatter
 import com.example.utils.TokenManager
 import kotlinx.coroutines.launch
 import java.text.NumberFormat
@@ -139,9 +140,7 @@ class ExpenseListActivity : ComponentActivity() {
 fun ExpenseListContent(resumeEpoch: Long = 0L) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
-    val currencyFormat = NumberFormat.getCurrencyInstance(Locale("pt", "PT")).apply {
-        currency = java.util.Currency.getInstance("EUR")
-    }
+    val currencyFormat = remember { CurrencyFormatter.getCurrencyFormat() }
 
     var activeFilter by remember { mutableStateOf("Tudo") }
     var searchQuery by remember { mutableStateOf("") }
@@ -418,11 +417,3 @@ fun ExpenseListContent(resumeEpoch: Long = 0L) {
     }
 }
 
-fun getStaticFullTransactions(): List<Expense> {
-    return listOf(
-        Expense(1, "Restaurante Sabor", 85.50, "Hoje, 12:30", 1, "Alimentação", false),
-        Expense(2, "Uber", 32.00, "Hoje, 09:15", 2, "Transporte", false),
-        Expense(3, "Supermercado Extra", 450.20, "Ontem, 18:45", 1, "Alimentação", false),
-        Expense(4, "Conta de Luz", 180.00, "Ontem, 10:00", 3, "Moradia", false)
-    )
-}
