@@ -82,12 +82,10 @@ fun RelatoriosScreen(allIncomes: List<Expense>, allExpenses: List<Expense>) {
         (allExpenses + allIncomes).forEach { tx ->
             val catName = tx.displayCategoryName.lowercase()
             val targetKey = when {
-                catName.contains("salário") || catName.contains("vencimento") -> "Salário"
                 catName.contains("moradia") || catName.contains("renda") || catName.contains("luz") || catName.contains("água") -> "Moradia"
                 catName.contains("alimentação") || catName.contains("restaurante") || catName.contains("comida") -> "Alimentação"
                 catName.contains("transporte") || catName.contains("carro") || catName.contains("uber") -> "Transporte"
                 catName.contains("lazer") || catName.contains("viagem") -> "Lazer"
-                catName.contains("saúde") || catName.contains("saude") -> "Saúde"
                 else -> "Outros"
             }
             map[targetKey] = map.getOrDefault(targetKey, 0.0) + tx.amount
@@ -99,32 +97,26 @@ fun RelatoriosScreen(allIncomes: List<Expense>, allExpenses: List<Expense>) {
     val alimentacaoAmt = groupedData.getOrDefault("Alimentação", 0.0)
     val transporteAmt = groupedData.getOrDefault("Transporte", 0.0)
     val lazerAmt = groupedData.getOrDefault("Lazer", 0.0)
-    val saudeAmt = groupedData.getOrDefault("Saúde", 0.0)
-    val salarioAmt = groupedData.getOrDefault("Salário", 0.0)
     val outrosAmt = groupedData.getOrDefault("Outros", 0.0)
 
-    val totalDistSum = moradiaAmt + alimentacaoAmt + transporteAmt + lazerAmt + saudeAmt + salarioAmt + outrosAmt
+    val totalDistSum = moradiaAmt + alimentacaoAmt + transporteAmt + lazerAmt + outrosAmt
     val pcts = if (totalDistSum > 0.0) {
         listOf(
             (moradiaAmt / totalDistSum).toFloat(),
             (alimentacaoAmt / totalDistSum).toFloat(),
             (transporteAmt / totalDistSum).toFloat(),
             (lazerAmt / totalDistSum).toFloat(),
-            (saudeAmt / totalDistSum).toFloat(),
-            (salarioAmt / totalDistSum).toFloat(),
             (outrosAmt / totalDistSum).toFloat()
         )
     } else {
-        listOf(0f, 0f, 0f, 0f, 0f, 0f, 0f)
+        listOf(0f, 0f, 0f, 0f, 0f)
     }
     
     val moradiaPct = pcts[0]
     val alimentacaoPct = pcts[1]
     val transportePct = pcts[2]
     val lazerPct = pcts[3]
-    val saudePct = pcts[4]
-    val salarioPct = pcts[5]
-    val outrosPct = pcts[6]
+    val outrosPct = pcts[4]
 
     val maxPctValue = pcts.maxOrNull() ?: 0f
     val minPctValue = pcts.asSequence().filter { it > 0 }.minOrNull() ?: 0f
@@ -133,8 +125,6 @@ fun RelatoriosScreen(allIncomes: List<Expense>, allExpenses: List<Expense>) {
     val alimentacaoStr = currencyFormat.format(alimentacaoAmt)
     val transporteStr = currencyFormat.format(transporteAmt)
     val lazerStr = currencyFormat.format(lazerAmt)
-    val saudeStr = currencyFormat.format(saudeAmt)
-    val salarioStr = currencyFormat.format(salarioAmt)
     val outrosStr = currencyFormat.format(outrosAmt)
 
     val chartPoints = remember(allIncomes, allExpenses, selectedPeriod) {
@@ -278,8 +268,6 @@ fun RelatoriosScreen(allIncomes: List<Expense>, allExpenses: List<Expense>) {
                             alimentacaoStr,
                             transporteStr,
                             lazerStr,
-                            saudeStr,
-                            salarioStr,
                             outrosStr
                         )
                     },
@@ -302,8 +290,6 @@ fun RelatoriosScreen(allIncomes: List<Expense>, allExpenses: List<Expense>) {
                             alimentacaoStr,
                             transporteStr,
                             lazerStr,
-                            saudeStr,
-                            salarioStr,
                             outrosStr
                         )
                     },
@@ -500,9 +486,7 @@ fun RelatoriosScreen(allIncomes: List<Expense>, allExpenses: List<Expense>) {
                                 drawArc(color = Color(0xFF45FEC9), startAngle = -90f + (360f * moradiaPct), sweepAngle = 360f * alimentacaoPct, useCenter = false, style = Stroke(strokeWidth, cap = StrokeCap.Round))
                                 drawArc(color = Color(0xFFFFDEC4), startAngle = -90f + (360f * (moradiaPct + alimentacaoPct)), sweepAngle = 360f * transportePct, useCenter = false, style = Stroke(strokeWidth, cap = StrokeCap.Round))
                                 drawArc(color = Color(0xFFFFB1C1), startAngle = -90f + (360f * (moradiaPct + alimentacaoPct + transportePct)), sweepAngle = 360f * lazerPct, useCenter = false, style = Stroke(strokeWidth, cap = StrokeCap.Round))
-                                drawArc(color = Color(0xFF90CAF9), startAngle = -90f + (360f * (moradiaPct + alimentacaoPct + transportePct + lazerPct)), sweepAngle = 360f * saudePct, useCenter = false, style = Stroke(strokeWidth, cap = StrokeCap.Round))
-                                drawArc(color = Color(0xFFFFEB3B), startAngle = -90f + (360f * (moradiaPct + alimentacaoPct + transportePct + lazerPct + saudePct)), sweepAngle = 360f * salarioPct, useCenter = false, style = Stroke(strokeWidth, cap = StrokeCap.Round))
-                                drawArc(color = Color.LightGray, startAngle = -90f + (360f * (moradiaPct + alimentacaoPct + transportePct + lazerPct + saudePct + salarioPct)), sweepAngle = 360f * outrosPct, useCenter = false, style = Stroke(strokeWidth, cap = StrokeCap.Round))
+                                drawArc(color = Color.LightGray, startAngle = -90f + (360f * (moradiaPct + alimentacaoPct + transportePct + lazerPct)), sweepAngle = 360f * outrosPct, useCenter = false, style = Stroke(strokeWidth, cap = StrokeCap.Round))
                             }
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text("MAIOR", color = Color.Gray, fontSize = 10.sp, fontWeight = FontWeight.Bold)
@@ -520,8 +504,6 @@ fun RelatoriosScreen(allIncomes: List<Expense>, allExpenses: List<Expense>) {
                             CategoryLegendRow("Alimentação", alimentacaoStr, alimentacaoPct, Color(0xFF45FEC9), maxPctValue, minPctValue)
                             CategoryLegendRow("Transporte", transporteStr, transportePct, Color(0xFFFFDEC4), maxPctValue, minPctValue)
                             CategoryLegendRow("Lazer", lazerStr, lazerPct, Color(0xFFFFB1C1), maxPctValue, minPctValue)
-                            CategoryLegendRow("Saúde", saudeStr, saudePct, Color(0xFF90CAF9), maxPctValue, minPctValue)
-                            CategoryLegendRow("Salário", salarioStr, salarioPct, Color(0xFFFFEB3B), maxPctValue, minPctValue)
                             CategoryLegendRow("Outros", outrosStr, outrosPct, Color.LightGray, maxPctValue, minPctValue)
                         }
                     }

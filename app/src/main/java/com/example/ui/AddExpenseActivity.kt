@@ -110,21 +110,13 @@ fun AddExpenseScreenContent(onSuccess: () -> Unit, onCancel: () -> Unit) {
             val res = api.getCategories()
             if (res.isSuccessful && res.body() != null) {
                 val apiCats = res.body()!!
-                if (apiCats.isEmpty()) {
-                    systemCategories = defaultCategories
-                    selectedCategory = defaultCategories.firstOrNull()
-                    isUsingLocalFallbackCategories = true
-                } else {
-                    val finalCategories = apiCats.distinctBy { it.id }
-                    systemCategories = finalCategories
-                    selectedCategory = finalCategories.firstOrNull()
-                    isUsingLocalFallbackCategories = false
-                }
+                systemCategories = (defaultCategories + apiCats).distinctBy { it.displayName.lowercase().trim() }
+                selectedCategory = systemCategories.firstOrNull()
+                isUsingLocalFallbackCategories = false
             } else {
                 systemCategories = defaultCategories
                 selectedCategory = defaultCategories.firstOrNull()
                 isUsingLocalFallbackCategories = true
-                hasCategoryLoadError = true
             }
         } catch (e: Exception) {
             e.printStackTrace()
@@ -373,13 +365,16 @@ fun AddExpenseScreenContent(onSuccess: () -> Unit, onCancel: () -> Unit) {
                 isSaving = true
                 coroutineScope.launch {
                     try {
-                            val api = RetrofitClient.getApiService(context)
-
+                        val api = RetrofitClient.getApiService(context)
                         val currentCategory = selectedCategory
-                        val resolvedCategoryId = if (!isUsingLocalFallbackCategories && currentCategory?.id != null) {
-                            currentCategory.id
+                        
+                        val allCats = api.getCategories().body() ?: emptyList()
+                        val categoryName = currentCategory?.displayName ?: "Outros"
+                        val existingOnServer = allCats.find { it.displayName.lowercase().trim() == categoryName.lowercase().trim() }
+
+                        val resolvedCategoryId = if (existingOnServer != null) {
+                            existingOnServer.id
                         } else {
-                            val categoryName = currentCategory?.name ?: currentCategory?.displayName ?: "Outros"
                             val categoryResponse = api.createCategory(CategoryRequest(categoryName))
                             if (categoryResponse.isSuccessful && categoryResponse.body() != null) {
                                 categoryResponse.body()!!.id
@@ -394,7 +389,7 @@ fun AddExpenseScreenContent(onSuccess: () -> Unit, onCancel: () -> Unit) {
                             amount = amtValue,
                             date = apiDate,
                             categoryId = resolvedCategoryId,
-                            categoryName = currentCategory?.displayName,
+                            categoryName = categoryName,
                             category = null
                         )
 

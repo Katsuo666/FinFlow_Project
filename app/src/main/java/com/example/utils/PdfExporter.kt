@@ -22,8 +22,6 @@ object PdfExporter {
         alimentacao: String,
         transporte: String,
         lazer: String,
-        saude: String,
-        salario: String,
         outros: String
     ) {
         val pdfDocument = PdfDocument()
@@ -81,9 +79,7 @@ object PdfExporter {
         canvas.drawText("• Alimentação:", 50f, startY + spacing, paint); canvas.drawText(alimentacao, 200f, startY + spacing, paint)
         canvas.drawText("• Transporte:", 50f, startY + 2 * spacing, paint); canvas.drawText(transporte, 200f, startY + 2 * spacing, paint)
         canvas.drawText("• Lazer:", 50f, startY + 3 * spacing, paint); canvas.drawText(lazer, 200f, startY + 3 * spacing, paint)
-        canvas.drawText("• Saúde:", 50f, startY + 4 * spacing, paint); canvas.drawText(saude, 200f, startY + 4 * spacing, paint)
-        canvas.drawText("• Salário:", 50f, startY + 5 * spacing, paint); canvas.drawText(salario, 200f, startY + 5 * spacing, paint)
-        canvas.drawText("• Outros:", 50f, startY + 6 * spacing, paint); canvas.drawText(outros, 200f, startY + 6 * spacing, paint)
+        canvas.drawText("• Outros:", 50f, startY + 4 * spacing, paint); canvas.drawText(outros, 200f, startY + 4 * spacing, paint)
 
         paint.textSize = 10f
         paint.color = android.graphics.Color.GRAY

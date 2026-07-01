@@ -14,8 +14,6 @@ object ExcelExporter {
         alimentacao: String,
         transporte: String,
         lazer: String,
-        saude: String,
-        salario: String,
         outros: String
     ) {
         val csvContent = StringBuilder()
@@ -29,8 +27,6 @@ object ExcelExporter {
         csvContent.append("Alimentacao;${alimentacao}\n")
         csvContent.append("Transporte;${transporte}\n")
         csvContent.append("Lazer;${lazer}\n")
-        csvContent.append("Saude;${saude}\n")
-        csvContent.append("Salario;${salario}\n")
         csvContent.append("Outros;${outros}\n")
 
         val file = File(context.cacheDir, "Relatorio_FinFlow.csv")
