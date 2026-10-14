@@ -1,5 +1,9 @@
 # FinFlow
 
+<p align="center">
+  <img src="app/src/main/ic_launcher-playstore.png" alt="Ícone do FinFlow" width="96">
+</p>
+
 App Android de finanças pessoais para gerir despesas, receitas e metas financeiras. Escrita em Kotlin com Jetpack Compose e ligada a uma API REST com autenticação JWT.
 
 ## Funcionalidades
