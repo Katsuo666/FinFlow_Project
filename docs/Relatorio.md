@@ -2,7 +2,7 @@
 **Curso:** [Introduzir Nome do Curso]  
 **Disciplina:** [Introduzir Nome da Disciplina]  
 **Projeto:** FinFlow - Ecossistema de Gestão Financeira  
-**Autor:** [Seu Nome Completo]  
+**Autor:** Marcos António Santos Canastro  
 **Data:** 1 de julho de 2026  
 
 ---
